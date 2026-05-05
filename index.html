@@ -1,0 +1,4201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ALPINE WINGS — A Five-Stage Flight Through The Sky</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;0,9..144,900;1,9..144,400;1,9..144,600;1,9..144,800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --plane-red: #e63946;
+    --hud-cyan: #7fdbda;
+    --hud-amber: #ffb951;
+    --hud-violet: #b87cf5;
+    --hud-magma: #ff6a3a;
+    --hud-aurora: #00ffaa;
+    --bg-deep: #050810;
+    --danger: #ff3a5c;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-deep);
+    font-family: 'Chakra Petch', sans-serif;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    position: fixed;
+    width: 100%;
+  }
+
+  #game {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  /* ===== HUD ===== */
+  .hud-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 18px 24px;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    gap: 10px;
+  }
+
+  .hud-block {
+    background: rgba(10, 14, 26, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(127, 219, 218, 0.28);
+    padding: 9px 15px;
+    min-width: 120px;
+    position: relative;
+  }
+  .hud-block::before, .hud-block::after {
+    content: '';
+    position: absolute;
+    width: 7px; height: 7px;
+    border: 1.5px solid var(--hud-cyan);
+    opacity: 0.7;
+  }
+  .hud-block::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+  .hud-block::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+  .hud-row {
+    display: flex; gap: 8px;
+    align-items: flex-start;
+  }
+
+  .hud-label {
+    font-size: 9px;
+    color: var(--hud-cyan);
+    opacity: 0.8;
+    margin-bottom: 3px;
+  }
+
+  .hud-value {
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+  }
+  .hud-value.amber  { color: var(--hud-amber); }
+  .hud-value.violet { color: var(--hud-violet); }
+  .hud-value.cyan   { color: var(--hud-cyan); }
+
+  .lives { display: flex; gap: 5px; margin-top: 3px; justify-content: flex-end; flex-wrap: wrap; max-width: 160px; }
+  .life-pip {
+    width: 12px; height: 12px;
+    border: 1.5px solid var(--plane-red);
+    transform: rotate(45deg);
+  }
+  .life-pip.filled {
+    background: var(--plane-red);
+    box-shadow: 0 0 10px rgba(230, 57, 70, 0.7);
+  }
+  .life-pip:not(.filled) { opacity: 0.22; }
+
+  /* ===== Boss bar ===== */
+  .boss-banner {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 14px 24px 10px;
+    background: linear-gradient(180deg, rgba(255,58,92,0.18) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(255,58,92,0.4);
+    z-index: 12;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity 0.4s, transform 0.4s;
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  .boss-banner.visible { transform: translateY(0); opacity: 1; }
+
+  .boss-label {
+    font-size: 9px;
+    color: var(--danger);
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .boss-name {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 800;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+  .boss-bar-track {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,58,92,0.3);
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .boss-bar-fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--danger), var(--hud-amber));
+    transform-origin: left center;
+    transition: transform 0.2s linear;
+  }
+  .boss-phase {
+    margin-top: 6px;
+    font-size: 9px;
+    color: var(--hud-amber);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  /* ===== Combo ===== */
+  .combo {
+    position: absolute;
+    top: 110px; left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    z-index: 11;
+    pointer-events: none;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.18s, transform 0.25s cubic-bezier(.2,1.4,.4,1);
+  }
+  .combo.active { opacity: 1; transform: translateX(-50%) scale(1); }
+  .combo.pop    { transform: translateX(-50%) scale(1.15); }
+  .combo-label {
+    font-size: 9.5px;
+    color: var(--hud-amber);
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .combo-mult {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 800;
+    font-size: 32px;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(255,185,81,0.7);
+    line-height: 1;
+  }
+  .combo-mult em { color: var(--hud-amber); font-style: italic; }
+
+  .combo-timer {
+    width: 90px; height: 2px;
+    background: rgba(255,255,255,0.15);
+    margin: 6px auto 0;
+    position: relative; overflow: hidden;
+  }
+  .combo-timer-fill {
+    position: absolute; inset: 0;
+    background: var(--hud-amber);
+    transform-origin: left center;
+  }
+
+  /* ===== Powerup tray ===== */
+  .powerup-tray {
+    position: absolute;
+    right: 24px;
+    top: 96px;
+    z-index: 11;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+  }
+  .pup {
+    width: 38px; height: 38px;
+    background: rgba(10,14,26,0.6);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    position: relative;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .pup-bar {
+    position: absolute;
+    bottom: -1px; left: -1px; right: -1px;
+    height: 2px;
+    background: rgba(255,255,255,0.3);
+  }
+  .pup-bar-fill {
+    height: 100%;
+    transform-origin: left center;
+    background: var(--hud-cyan);
+  }
+  .pup.shield  { border-color: var(--hud-cyan);   color: var(--hud-cyan); }
+  .pup.magnet  { border-color: var(--hud-violet); color: var(--hud-violet); }
+  .pup.x2      { border-color: var(--hud-amber);  color: var(--hud-amber); }
+  .pup.slow    { border-color: var(--hud-aurora); color: var(--hud-aurora); }
+  .pup.shield .pup-bar-fill  { background: var(--hud-cyan); }
+  .pup.magnet .pup-bar-fill  { background: var(--hud-violet); }
+  .pup.x2     .pup-bar-fill  { background: var(--hud-amber); }
+  .pup.slow   .pup-bar-fill  { background: var(--hud-aurora); }
+
+  /* ===== Overlays ===== */
+  .overlay {
+    position: absolute; inset: 0;
+    z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(5,8,16,0.45), rgba(5,8,16,0.92));
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.45s ease;
+  }
+  .overlay.visible { opacity: 1; pointer-events: auto; }
+
+  .card {
+    text-align: center;
+    padding: 40px 56px;
+    max-width: 680px;
+    animation: rise 0.65s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    padding: 5px 13px;
+    border: 1px solid var(--plane-red);
+    color: var(--plane-red);
+    margin-bottom: 22px;
+    background: rgba(230, 57, 70, 0.06);
+  }
+  .badge.amber  { border-color: var(--hud-amber); color: var(--hud-amber); background: rgba(255,185,81,0.06); }
+  .badge.cyan   { border-color: var(--hud-cyan);  color: var(--hud-cyan);  background: rgba(127,219,218,0.06); }
+  .badge.violet { border-color: var(--hud-violet);color: var(--hud-violet);background: rgba(184,124,245,0.06); }
+  .badge.danger { border-color: var(--danger);    color: var(--danger);    background: rgba(255,58,92,0.06); }
+
+  .title {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: clamp(50px, 8.5vw, 100px);
+    line-height: 0.92;
+    letter-spacing: -0.025em;
+    margin-bottom: 4px;
+    background: linear-gradient(180deg, #ffffff 0%, #7fdbda 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--hud-amber);
+    -webkit-text-fill-color: var(--hud-amber);
+  }
+
+  .subtitle {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.42em;
+    color: var(--hud-cyan);
+    opacity: 0.85;
+    margin: 6px 0 28px;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 22px 0 22px;
+  }
+  .ctrl {
+    background: rgba(127, 219, 218, 0.07);
+    border: 1px solid rgba(127, 219, 218, 0.22);
+    padding: 11px 12px;
+    text-align: left;
+  }
+  .ctrl-key {
+    display: inline-block;
+    background: rgba(255,255,255,0.08);
+    padding: 3px 8px;
+    font-weight: 600;
+    font-size: 10px;
+    margin-bottom: 5px;
+    border: 1px solid rgba(255,255,255,0.18);
+    letter-spacing: 0.08em;
+  }
+  .ctrl-desc { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; opacity: 0.75; }
+
+  .objectives {
+    font-size: 10.5px;
+    opacity: 0.6;
+    letter-spacing: 0.22em;
+    line-height: 1.9;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .objectives span        { color: var(--hud-amber); opacity: 1; }
+  .objectives .danger     { color: var(--plane-red); }
+  .objectives .cyan       { color: var(--hud-cyan); }
+
+  .start-prompt {
+    margin-top: 24px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.45; }
+    50%      { opacity: 1; }
+  }
+
+  .stats {
+    display: flex; gap: 28px;
+    justify-content: center;
+    margin: 24px 0 18px;
+    flex-wrap: wrap;
+  }
+  .stat-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: 36px;
+    color: var(--hud-amber);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    opacity: 0.6;
+  }
+
+  .record-line {
+    font-size: 11px;
+    color: var(--hud-amber);
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    min-height: 14px;
+  }
+
+  /* Level intro card flair */
+  .level-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--hud-amber);
+    letter-spacing: 0.5em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .level-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: clamp(40px, 7vw, 80px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+  }
+  .level-desc {
+    font-size: 12.5px;
+    line-height: 1.7;
+    opacity: 0.78;
+    max-width: 460px;
+    margin: 0 auto 26px;
+  }
+  .objective-list {
+    display: flex; gap: 18px; justify-content: center;
+    margin: 18px 0 8px;
+    flex-wrap: wrap;
+  }
+  .obj-pill {
+    background: rgba(127,219,218,0.07);
+    border: 1px solid rgba(127,219,218,0.25);
+    padding: 8px 14px;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .obj-pill .obj-icon { color: var(--hud-amber); margin-right: 6px; }
+
+  /* ===== Pause / settings ===== */
+  .top-right-tools {
+    position: absolute;
+    bottom: 16px;
+    right: 28px;
+    z-index: 11;
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+  }
+  .tool-btn {
+    background: rgba(10,14,26,0.55);
+    border: 1px solid rgba(127,219,218,0.3);
+    color: #fff;
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-family: inherit;
+  }
+  .tool-btn:hover {
+    background: rgba(127,219,218,0.12);
+    border-color: var(--hud-cyan);
+  }
+  .tool-btn.muted { opacity: 0.5; }
+
+  /* ===== Floating score popups ===== */
+  .float-score {
+    position: absolute;
+    pointer-events: none;
+    z-index: 9;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--hud-amber);
+    text-shadow: 0 0 12px rgba(255,185,81,0.6);
+    animation: floatUp 1.1s ease-out forwards;
+    will-change: transform, opacity;
+  }
+  .float-score.cyan  { color: var(--hud-cyan); text-shadow: 0 0 12px rgba(127,219,218,0.6); }
+  .float-score.violet{ color: var(--hud-violet); text-shadow: 0 0 12px rgba(184,124,245,0.6); }
+  @keyframes floatUp {
+    0%   { opacity: 0; transform: translate(-50%, 0); }
+    15%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -56px); }
+  }
+
+  /* ===== Boss alert flash ===== */
+  .alert-flash {
+    position: absolute; inset: 0;
+    z-index: 25;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(255,58,92,0.55) 100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .alert-flash.on { animation: alertPulse 1.2s ease-in-out 2; }
+  @keyframes alertPulse {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 1; }
+  }
+
+  /* ===== Footer marks ===== */
+  .corner-mark {
+    position: absolute;
+    bottom: 16px; left: 24px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.42em;
+    opacity: 0.4;
+    color: var(--hud-cyan);
+    z-index: 10;
+    pointer-events: none;
+  }
+  .corner-mark-r {
+    position: absolute;
+    bottom: 56px; right: 24px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.42em;
+    opacity: 0.55;
+    z-index: 10;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+
+  /* ===== Mission tracker (bottom left) ===== */
+  .mission-tracker {
+    position: absolute;
+    bottom: 16px; left: 24px;
+    z-index: 10;
+    pointer-events: none;
+    background: rgba(10,14,26,0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(127,219,218,0.22);
+    padding: 9px 14px;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.7;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .mission-tracker.visible { opacity: 1; }
+  .mission-line { display: flex; gap: 10px; align-items: center; }
+  .mission-icon { color: var(--hud-amber); font-size: 11px; }
+  .mission-line.done { opacity: 0.45; }
+  .mission-line.done .mission-icon { color: var(--hud-aurora); }
+  .mission-count { color: var(--hud-cyan); font-variant-numeric: tabular-nums; }
+
+  /* ===== Mobile boost button ===== */
+  .mobile-boost {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 13;
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    background: rgba(255, 185, 81, 0.18);
+    border: 2px solid var(--hud-amber);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--hud-amber);
+    font-family: 'Chakra Petch', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    box-shadow: 0 0 24px rgba(255, 185, 81, 0.18);
+    transition: transform 0.08s, background 0.08s;
+  }
+  .mobile-boost.visible { display: flex; }
+  .mobile-boost.pressed {
+    background: rgba(255, 185, 81, 0.4);
+    transform: scale(0.94);
+    box-shadow: 0 0 36px rgba(255, 185, 81, 0.5);
+  }
+  .mobile-boost::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 185, 81, 0.35);
+  }
+
+  /* ===== Orientation hint ===== */
+  .orient-hint {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    background: var(--bg-deep);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+  }
+  .orient-hint.visible { display: flex; }
+  .orient-icon {
+    font-size: 56px;
+    margin-bottom: 24px;
+    animation: rotateHint 2.5s ease-in-out infinite;
+    color: var(--hud-cyan);
+  }
+  @keyframes rotateHint {
+    0%, 30%   { transform: rotate(0deg); }
+    50%, 70%  { transform: rotate(90deg); }
+    100%      { transform: rotate(0deg); }
+  }
+  .orient-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 800;
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  .orient-sub {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    color: var(--hud-cyan);
+    opacity: 0.75;
+  }
+
+  @media (max-width: 720px) {
+    .hud-top { padding: 10px; gap: 4px; }
+    .hud-block { min-width: 0; padding: 6px 8px; flex: 1; }
+    .hud-value { font-size: 13px; }
+    .hud-label { font-size: 8px; }
+    .controls { grid-template-columns: 1fr 1fr; gap: 7px; }
+    .ctrl { padding: 7px 8px; }
+    .ctrl-desc { font-size: 9px; }
+    .card { padding: 26px 18px; }
+    .stats { gap: 16px; }
+    .stat-value { font-size: 28px; }
+    .corner-mark { left: 10px; bottom: 8px; font-size: 8px; }
+    .corner-mark-r { right: 10px; bottom: 44px; font-size: 8px; }
+    .top-right-tools { right: 10px; bottom: 8px; gap: 10px; }
+    .tool-btn { width: 44px; height: 44px; font-size: 18px; }
+    .mission-tracker { bottom: 8px; left: 10px; padding: 6px 10px; font-size: 8.5px; }
+    .powerup-tray { right: 10px; top: 86px; }
+    .pup { width: 30px; height: 30px; font-size: 14px; }
+    .life-pip { width: 10px; height: 10px; }
+    .boss-banner { padding: 10px 16px 8px; }
+    .boss-name { font-size: 17px; }
+    .combo-mult { font-size: 24px; }
+    .combo { top: 80px; }
+    .mobile-boost { width: 76px; height: 76px; bottom: 16px; right: 16px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HUD -->
+<div class="hud-top">
+  <div class="hud-row">
+    <div class="hud-block">
+      <div class="hud-label">Score</div>
+      <div class="hud-value" id="scoreVal">000000</div>
+    </div>
+    <div class="hud-block">
+      <div class="hud-label">Stage</div>
+      <div class="hud-value violet" id="stageVal">— / 5</div>
+    </div>
+  </div>
+  <div class="hud-block" style="text-align:center">
+    <div class="hud-label">Flight Level</div>
+    <div class="hud-value amber" id="altVal">FL —</div>
+  </div>
+  <div class="hud-block" style="text-align:right">
+    <div class="hud-label">Fuselage</div>
+    <div class="lives" id="livesEl"></div>
+  </div>
+</div>
+
+<!-- Boss banner -->
+<div class="boss-banner" id="bossBanner">
+  <div class="boss-label">▼ Hostile Encounter</div>
+  <div class="boss-name" id="bossName">—</div>
+  <div class="boss-bar-track"><div class="boss-bar-fill" id="bossBarFill" style="transform: scaleX(1)"></div></div>
+  <div class="boss-phase" id="bossPhase">Phase 1</div>
+</div>
+
+<!-- Combo display -->
+<div class="combo" id="comboEl">
+  <div class="combo-label">Combo</div>
+  <div class="combo-mult"><em>×</em><span id="comboMult">2</span></div>
+  <div class="combo-timer"><div class="combo-timer-fill" id="comboTimerFill"></div></div>
+</div>
+
+<!-- Powerup tray -->
+<div class="powerup-tray" id="pupTray"></div>
+
+<!-- Mission tracker -->
+<div class="mission-tracker" id="missionTracker"></div>
+
+<!-- Footer marks -->
+<div class="corner-mark">Alpine Wings · Campaign v2.0</div>
+<div class="corner-mark-r" id="distEl">DIST 0.0 KM</div>
+
+<!-- Tools -->
+<div class="top-right-tools">
+  <button class="tool-btn" id="muteBtn" title="Toggle sound (M)">♪</button>
+  <button class="tool-btn" id="pauseBtn" title="Pause (P)">‖</button>
+  <button class="tool-btn" id="fullscreenBtn" title="Fullscreen (F)">⛶</button>
+</div>
+
+<!-- Mobile boost button -->
+<div class="mobile-boost" id="mobileBoost">BOOST</div>
+
+<!-- Orientation hint (portrait warning) -->
+<div class="orient-hint" id="orientHint">
+  <div class="orient-icon">⟳</div>
+  <div class="orient-title">Rotate your device</div>
+  <div class="orient-sub">Best in landscape</div>
+</div>
+
+<!-- Boss alert flash -->
+<div class="alert-flash" id="alertFlash"></div>
+
+<!-- ===== Overlays ===== -->
+
+<!-- Main menu -->
+<div class="overlay visible" id="menuScreen">
+  <div class="card">
+    <div class="badge">▲ Pre-flight check complete</div>
+    <h1 class="title">Alpine<br><em>Wings</em></h1>
+    <div class="subtitle">Twenty stages · twenty skies · one pilot</div>
+
+    <div class="controls" id="kbControls">
+      <div class="ctrl"><span class="ctrl-key">W A S D / ← ↑ → ↓</span><div class="ctrl-desc">Move</div></div>
+      <div class="ctrl"><span class="ctrl-key">SPACE</span><div class="ctrl-desc">Boost</div></div>
+      <div class="ctrl"><span class="ctrl-key">P</span><div class="ctrl-desc">Pause</div></div>
+      <div class="ctrl"><span class="ctrl-key">M</span><div class="ctrl-desc">Mute</div></div>
+    </div>
+
+    <div class="controls" id="touchControls" style="display:none;">
+      <div class="ctrl"><span class="ctrl-key">DRAG</span><div class="ctrl-desc">Move (X / Y)</div></div>
+      <div class="ctrl"><span class="ctrl-key">BOOST</span><div class="ctrl-desc">Hold button</div></div>
+      <div class="ctrl"><span class="ctrl-key">‖</span><div class="ctrl-desc">Pause</div></div>
+      <div class="ctrl"><span class="ctrl-key">♪</span><div class="ctrl-desc">Mute</div></div>
+    </div>
+
+    <div class="objectives">
+      Five distinct skies · <span class="cyan">cloud rings</span> · <span>passenger pickups</span> · <span>power-ups</span> · <span class="danger">boss encounters</span>
+    </div>
+
+    <div class="start-prompt">▸ Press space or tap to begin departure</div>
+  </div>
+</div>
+
+<!-- Level intro -->
+<div class="overlay" id="levelIntroScreen">
+  <div class="card">
+    <div class="level-num" id="liNum">Stage 01 of 05</div>
+    <div class="level-name" id="liName">Alpine Dawn</div>
+    <div class="level-desc" id="liDesc">A gentle climb above the morning fog. Find your line.</div>
+
+    <div class="objective-list" id="liObjectives"></div>
+
+    <div class="objectives" style="margin-top: 18px;">
+      Hostile contact: <span class="danger" id="liBoss">—</span>
+    </div>
+
+    <div class="start-prompt">▸ Press space or tap to launch</div>
+  </div>
+</div>
+
+<!-- Level complete -->
+<div class="overlay" id="levelCompleteScreen">
+  <div class="card">
+    <div class="badge cyan">✦ Stage cleared</div>
+    <h1 class="title" style="font-size: clamp(40px,7vw,72px);">Stage <em><span id="lcNum">1</span> · clear</em></h1>
+    <div class="stats">
+      <div class="stat"><div class="stat-value" id="lcScore">0</div><div class="stat-label">Stage Score</div></div>
+      <div class="stat"><div class="stat-value" id="lcRings">0</div><div class="stat-label">Rings</div></div>
+      <div class="stat"><div class="stat-value" id="lcPax">0</div><div class="stat-label">Passengers</div></div>
+      <div class="stat"><div class="stat-value" id="lcCombo">×0</div><div class="stat-label">Best Combo</div></div>
+    </div>
+    <div class="record-line" id="lcRecord"></div>
+    <div class="start-prompt">▸ Press space or tap to advance</div>
+  </div>
+</div>
+
+<!-- Game over -->
+<div class="overlay" id="gameOverScreen">
+  <div class="card">
+    <div class="badge amber">▼ Flight ended</div>
+    <h1 class="title" style="font-size: clamp(42px,7.4vw,76px);">Touch <em>down</em></h1>
+    <div class="stats">
+      <div class="stat"><div class="stat-value" id="goScore">0</div><div class="stat-label">Final Score</div></div>
+      <div class="stat"><div class="stat-value" id="goStage">1</div><div class="stat-label">Stage Reached</div></div>
+      <div class="stat"><div class="stat-value" id="goRings">0</div><div class="stat-label">Rings · Total</div></div>
+      <div class="stat"><div class="stat-value" id="goCombo">×0</div><div class="stat-label">Best Combo</div></div>
+    </div>
+    <div class="record-line" id="goRecord"></div>
+    <div class="start-prompt">▸ Press space or tap to fly again</div>
+  </div>
+</div>
+
+<!-- Victory -->
+<div class="overlay" id="victoryScreen">
+  <div class="card">
+    <div class="badge amber">★ Campaign complete</div>
+    <h1 class="title" style="font-size: clamp(46px,8vw,90px);">Twenty skies, <em>one pilot</em></h1>
+    <p style="font-size:13px; opacity:0.78; line-height:1.7; max-width:480px; margin: 6px auto 26px;">
+      Dawn, glacier, storm, aurora, magma. Stratosphere, monsoon, dunes, polar dark, the gate.
+      Meteoroids, crystal, jungle, twisters, the volcano heart.
+      Frozen ocean, the corona, the nebula, the black hole — and at the end, the light itself.
+      The horizon belongs to you now.
+    </p>
+    <div class="stats">
+      <div class="stat"><div class="stat-value" id="vScore">0</div><div class="stat-label">Total Score</div></div>
+      <div class="stat"><div class="stat-value" id="vRings">0</div><div class="stat-label">Rings</div></div>
+      <div class="stat"><div class="stat-value" id="vPax">0</div><div class="stat-label">Passengers</div></div>
+      <div class="stat"><div class="stat-value" id="vCombo">×0</div><div class="stat-label">Best Combo</div></div>
+    </div>
+    <div class="start-prompt">▸ Press space or tap to fly the campaign again</div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div class="overlay" id="pauseScreen">
+  <div class="card">
+    <div class="badge cyan">‖ Paused</div>
+    <h1 class="title" style="font-size: clamp(42px,7vw,72px);">Hold <em>position</em></h1>
+    <div class="objectives" style="margin-top:18px">
+      <span class="cyan" id="pauseStage">Stage 1 / 5</span>
+    </div>
+    <div class="start-prompt">▸ Press P or tap to resume</div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ============================================================
+// CANVAS / VIEWPORT
+// ============================================================
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+let W = 0, H = 0;
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+// Touch-device detection
+const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+function checkOrientation() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  // Show portrait hint only on small touch devices held in portrait
+  const isPortraitMobile = IS_TOUCH && h > w && w < 600;
+  document.getElementById('orientHint').classList.toggle('visible', isPortraitMobile);
+}
+
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  checkOrientation();
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+resize();
+
+// Show boost button on touch devices
+if (IS_TOUCH) {
+  document.getElementById('mobileBoost').classList.add('visible');
+  document.getElementById('kbControls').style.display = 'none';
+  document.getElementById('touchControls').style.display = 'grid';
+  // Swap "Press space" prompts to "Tap to" on touch
+  document.querySelectorAll('.start-prompt').forEach(el => {
+    el.textContent = el.textContent.replace(/Press space or t/i, 'T').replace(/Press P or t/i, 'T');
+  });
+}
+
+// ============================================================
+// LEVEL DATA — 5 distinct biomes
+// ============================================================
+
+const LEVELS = [
+  {
+    id: 1,
+    name: 'Alpine Dawn',
+    desc: 'A gentle climb above the morning fog. Find your line through the warm light.',
+    duration: 1400,
+    palette: {
+      skyTop: '#2d2649', skyMid: '#d4779a', skyLow: '#ffd4a3',
+      sun: { x: 0.78, y: 0.42, r: 70, color: 'rgba(255,235,200,0.92)' },
+      mountainFar: 'rgba(80,70,110,0.55)',
+      mountainMid: 'rgba(60,50,90,0.78)',
+      mountainNear: ['#6a5a8a','#3d3068','#1a1232'],
+      snowCap: 'rgba(255,245,232,0.94)',
+      stars: 28,
+      starColor: '255,255,255',
+      vignette: 0.38,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'peakTop'],
+    boss: {
+      name: 'Cumulus Titan',
+      duration: 22,
+      attacks: ['rain', 'gust'],
+      tint: '#5a708e',
+      accent: '#a8c4d8',
+    },
+  },
+  {
+    id: 2,
+    name: 'Glacial Pass',
+    desc: 'Through the frozen corridor. Watch the icicles — they fall fast and quiet.',
+    duration: 1700,
+    palette: {
+      skyTop: '#0a3a5c', skyMid: '#5fa8c7', skyLow: '#b8e0e8',
+      sun: { x: 0.8, y: 0.34, r: 60, color: 'rgba(220,240,255,0.85)' },
+      mountainFar: 'rgba(120,160,180,0.55)',
+      mountainMid: 'rgba(80,130,150,0.78)',
+      mountainNear: ['#6a95a5','#345868','#142a35'],
+      snowCap: '#ffffff',
+      stars: 18,
+      starColor: '200,230,255',
+      vignette: 0.34,
+    },
+    weather: { type: 'snow' },
+    hazards: ['peakBottom', 'peakTop', 'icicle'],
+    boss: {
+      name: 'Frost Spire',
+      duration: 26,
+      attacks: ['icicle', 'iceWall'],
+      tint: '#6ba8c0',
+      accent: '#e0f5ff',
+    },
+  },
+  {
+    id: 3,
+    name: 'Storm Pass',
+    desc: 'Lightning carves the dark. The flash is a warning. The strike is the answer.',
+    duration: 1900,
+    palette: {
+      skyTop: '#0e0a20', skyMid: '#2a1e48', skyLow: '#5a4080',
+      sun: null,
+      mountainFar: 'rgba(50,45,80,0.7)',
+      mountainMid: 'rgba(35,30,60,0.85)',
+      mountainNear: ['#3d3460','#1a1430','#080612'],
+      snowCap: 'rgba(180,170,200,0.7)',
+      stars: 8,
+      starColor: '200,180,240',
+      vignette: 0.5,
+    },
+    weather: { type: 'rain' },
+    hazards: ['peakBottom', 'peakTop', 'lightning'],
+    boss: {
+      name: 'Storm King',
+      duration: 28,
+      attacks: ['lightning', 'gust'],
+      tint: '#5a4080',
+      accent: '#b87cf5',
+    },
+  },
+  {
+    id: 4,
+    name: 'Aurora Run',
+    desc: 'Neon ribbons over the dark. Drones patrol the corridor — read their wave.',
+    duration: 2100,
+    palette: {
+      skyTop: '#050a18', skyMid: '#0a1a3a', skyLow: '#1a2848',
+      sun: null,
+      mountainFar: 'rgba(20,30,50,0.75)',
+      mountainMid: 'rgba(15,25,40,0.88)',
+      mountainNear: ['#1a2238','#0a1422','#050810'],
+      snowCap: '#c0e8ff',
+      stars: 120,
+      starColor: '255,255,255',
+      vignette: 0.55,
+      aurora: true,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'peakTop', 'drone', 'meteor'],
+    boss: {
+      name: 'Mothership Vega',
+      duration: 30,
+      attacks: ['droneSwarm', 'beam'],
+      tint: '#0a1428',
+      accent: '#00ffaa',
+    },
+  },
+  {
+    id: 5,
+    name: 'Magma Range',
+    desc: 'The final crossing. Ash falls. The earth fires back. Hold your altitude.',
+    duration: 2300,
+    palette: {
+      skyTop: '#1a0a08', skyMid: '#6a1a10', skyLow: '#c44a1a',
+      sun: { x: 0.74, y: 0.48, r: 80, color: 'rgba(255,140,60,0.88)' },
+      mountainFar: 'rgba(80,30,20,0.75)',
+      mountainMid: 'rgba(60,20,15,0.88)',
+      mountainNear: ['#3a1a14','#1a0808','#0a0404'],
+      snowCap: '#ff4a2a',
+      stars: 4,
+      starColor: '255,180,140',
+      vignette: 0.55,
+    },
+    weather: { type: 'ash' },
+    hazards: ['peakBottom', 'peakTop', 'fireball', 'ashCloud'],
+    boss: {
+      name: 'Magma Lord',
+      duration: 32,
+      attacks: ['fireball', 'lavaWall'],
+      tint: '#8a2010',
+      accent: '#ffaa00',
+    },
+  },
+  {
+    id: 6,
+    name: 'Stratosphere',
+    desc: 'Above the weather, below the stars. The horizon curves. Hold your line through the orbital lanes.',
+    duration: 2400,
+    palette: {
+      skyTop: '#000008', skyMid: '#0a1838', skyLow: '#4a78b0',
+      sun: { x: 0.82, y: 0.26, r: 45, color: 'rgba(255,255,250,0.95)' },
+      mountainFar: 'rgba(80,120,170,0.32)',
+      mountainMid: 'rgba(50,90,140,0.55)',
+      mountainNear: ['#3a5a88','#1a2a4a','#0a1424'],
+      snowCap: '#e0eef8',
+      stars: 240,
+      starColor: '255,255,255',
+      vignette: 0.5,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'drone', 'meteor'],
+    boss: {
+      name: 'Orbital Watcher',
+      duration: 30,
+      attacks: ['beam', 'droneSwarm', 'asteroid'],
+      tint: '#1a2a4a',
+      accent: '#7fdbda',
+    },
+  },
+  {
+    id: 7,
+    name: 'Monsoon Coast',
+    desc: 'Rain over warm water. Lightning forks the sky. Watch for what rises from the sea.',
+    duration: 2500,
+    palette: {
+      skyTop: '#1a2a4a', skyMid: '#3a5a7a', skyLow: '#5a8090',
+      sun: null,
+      mountainFar: 'rgba(40,70,90,0.6)',
+      mountainMid: 'rgba(30,55,75,0.8)',
+      mountainNear: ['#2a4a5a','#1a2a3a','#0a1418'],
+      snowCap: 'rgba(180,200,210,0.7)',
+      stars: 6,
+      starColor: '180,200,220',
+      vignette: 0.45,
+    },
+    weather: { type: 'rain' },
+    hazards: ['peakBottom', 'peakTop', 'lightning', 'waterspout'],
+    boss: {
+      name: 'Hurricane Eye',
+      duration: 32,
+      attacks: ['lightning', 'gust', 'waterspout', 'rain'],
+      tint: '#2a4060',
+      accent: '#7fa8c8',
+    },
+  },
+  {
+    id: 8,
+    name: 'Desert Mirage',
+    desc: 'Golden dunes. The sun burns. Heat shimmer hides what comes next.',
+    duration: 2600,
+    palette: {
+      skyTop: '#3a2418', skyMid: '#a85820', skyLow: '#e8a850',
+      sun: { x: 0.76, y: 0.42, r: 90, color: 'rgba(255,220,140,0.95)' },
+      mountainFar: 'rgba(160,100,50,0.55)',
+      mountainMid: 'rgba(130,70,30,0.78)',
+      mountainNear: ['#a86028','#783818','#481810'],
+      snowCap: 'rgba(255,220,160,0.85)',
+      stars: 4,
+      starColor: '255,220,160',
+      vignette: 0.42,
+    },
+    weather: { type: 'ash' },
+    hazards: ['peakBottom', 'fireball', 'ashCloud'],
+    boss: {
+      name: 'Dune Wraith',
+      duration: 33,
+      attacks: ['gust', 'fireball', 'lavaWall'],
+      tint: '#683018',
+      accent: '#ffc870',
+    },
+  },
+  {
+    id: 9,
+    name: 'Polar Vortex',
+    desc: 'Endless dark. The vortex bites. Snow becomes shrapnel — keep your nose up.',
+    duration: 2700,
+    palette: {
+      skyTop: '#040810', skyMid: '#0a1828', skyLow: '#1a2a4a',
+      sun: null,
+      mountainFar: 'rgba(80,100,130,0.45)',
+      mountainMid: 'rgba(50,75,100,0.7)',
+      mountainNear: ['#5a7898','#2a4060','#0a1828'],
+      snowCap: '#ffffff',
+      stars: 90,
+      starColor: '200,220,255',
+      vignette: 0.55,
+      aurora: true,
+    },
+    weather: { type: 'snow' },
+    hazards: ['peakBottom', 'peakTop', 'icicle', 'meteor'],
+    boss: {
+      name: 'Frozen Leviathan',
+      duration: 35,
+      attacks: ['icicle', 'iceWall', 'gust', 'rain'],
+      tint: '#2a4060',
+      accent: '#a8d8f0',
+    },
+  },
+  {
+    id: 10,
+    name: 'Cosmic Gate',
+    desc: 'The final crossing. No more sky — just the dark, the asteroids, and what waits beyond the gate.',
+    duration: 3000,
+    palette: {
+      skyTop: '#000000', skyMid: '#080014', skyLow: '#180028',
+      sun: null,
+      mountainFar: 'rgba(40,30,60,0.5)',
+      mountainMid: 'rgba(60,30,80,0.65)',
+      mountainNear: ['#3a1a4a','#1a0a28','#080010'],
+      snowCap: '#b87cf5',
+      stars: 320,
+      starColor: '255,255,255',
+      vignette: 0.6,
+      aurora: true,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'drone', 'meteor', 'asteroid'],
+    boss: {
+      name: 'The Gatekeeper',
+      duration: 40,
+      attacks: ['beam', 'droneSwarm', 'asteroid', 'lightning'],
+      tint: '#1a0a28',
+      accent: '#b87cf5',
+    },
+  },
+  {
+    id: 11,
+    name: 'Meteoroid Storm',
+    desc: 'A wide field of falling stars. They burn, they break, they keep coming. Read their lines and slip between.',
+    duration: 2600,
+    palette: {
+      skyTop: '#020010', skyMid: '#180a30', skyLow: '#3a1860',
+      sun: null,
+      mountainFar: 'rgba(60,40,90,0.45)',
+      mountainMid: 'rgba(40,25,70,0.7)',
+      mountainNear: ['#3a2058','#1a0a30','#080418'],
+      snowCap: 'rgba(255,180,100,0.7)',
+      stars: 200,
+      starColor: '255,220,180',
+      vignette: 0.55,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'meteor', 'asteroid'],
+    boss: {
+      name: 'Meteoroid Queen',
+      duration: 34,
+      attacks: ['asteroid', 'fireball', 'beam'],
+      tint: '#3a1860',
+      accent: '#ffaa50',
+    },
+  },
+  {
+    id: 12,
+    name: 'Crystal Caverns',
+    desc: 'Inside the mountain. The walls glow. Stalactites above, stalagmites below — thread the gap.',
+    duration: 2700,
+    palette: {
+      skyTop: '#0a1830', skyMid: '#2a1860', skyLow: '#4a2890',
+      sun: null,
+      mountainFar: 'rgba(80,50,140,0.55)',
+      mountainMid: 'rgba(60,30,110,0.8)',
+      mountainNear: ['#6a40a8','#3a1880','#180838'],
+      snowCap: '#d8a8ff',
+      stars: 60,
+      starColor: '220,180,255',
+      vignette: 0.5,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'peakTop', 'icicle', 'lightning'],
+    boss: {
+      name: 'Crystal Sovereign',
+      duration: 35,
+      attacks: ['icicle', 'iceWall', 'beam', 'lightning'],
+      tint: '#3a1880',
+      accent: '#d8a8ff',
+    },
+  },
+  {
+    id: 13,
+    name: 'Jungle Canopy',
+    desc: 'Low and fast over the rainforest. Mist rolls between the peaks. The wildlife notices you.',
+    duration: 2750,
+    palette: {
+      skyTop: '#0a2818', skyMid: '#2a6a3a', skyLow: '#80b070',
+      sun: { x: 0.78, y: 0.4, r: 55, color: 'rgba(255,250,200,0.85)' },
+      mountainFar: 'rgba(40,90,50,0.6)',
+      mountainMid: 'rgba(30,70,40,0.82)',
+      mountainNear: ['#3a7a48','#1a4828','#082818'],
+      snowCap: 'rgba(180,220,160,0.7)',
+      stars: 4,
+      starColor: '220,255,200',
+      vignette: 0.42,
+    },
+    weather: { type: 'rain' },
+    hazards: ['peakBottom', 'peakTop', 'drone', 'lightning'],
+    boss: {
+      name: 'Forest Guardian',
+      duration: 35,
+      attacks: ['droneSwarm', 'rain', 'gust'],
+      tint: '#1a4828',
+      accent: '#a8e890',
+    },
+  },
+  {
+    id: 14,
+    name: 'Tornado Alley',
+    desc: 'Flat land, wide sky, columns of spinning air. Pick your gap before the wind picks you.',
+    duration: 2800,
+    palette: {
+      skyTop: '#2a1818', skyMid: '#5a3030', skyLow: '#8a6050',
+      sun: null,
+      mountainFar: 'rgba(80,60,50,0.55)',
+      mountainMid: 'rgba(60,40,30,0.78)',
+      mountainNear: ['#704028','#481810','#180808'],
+      snowCap: 'rgba(180,140,100,0.6)',
+      stars: 8,
+      starColor: '255,200,150',
+      vignette: 0.5,
+    },
+    weather: { type: 'rain' },
+    hazards: ['peakBottom', 'lightning', 'waterspout', 'meteor'],
+    boss: {
+      name: 'Twister Maelstrom',
+      duration: 36,
+      attacks: ['waterspout', 'gust', 'lightning', 'rain'],
+      tint: '#5a3030',
+      accent: '#e8a868',
+    },
+  },
+  {
+    id: 15,
+    name: 'Volcano Heart',
+    desc: 'Down inside the caldera. The lava breathes. Everything here is older than the sky.',
+    duration: 2850,
+    palette: {
+      skyTop: '#1a0404', skyMid: '#5a1408', skyLow: '#a83008',
+      sun: { x: 0.5, y: 0.85, r: 100, color: 'rgba(255,140,40,0.95)' },
+      mountainFar: 'rgba(100,30,15,0.75)',
+      mountainMid: 'rgba(70,20,10,0.88)',
+      mountainNear: ['#481008','#280404','#0a0000'],
+      snowCap: '#ff3a08',
+      stars: 0,
+      starColor: '255,140,80',
+      vignette: 0.6,
+    },
+    weather: { type: 'ash' },
+    hazards: ['peakBottom', 'peakTop', 'fireball', 'ashCloud', 'meteor'],
+    boss: {
+      name: 'Caldera Beast',
+      duration: 38,
+      attacks: ['fireball', 'lavaWall', 'asteroid'],
+      tint: '#5a1408',
+      accent: '#ffaa00',
+    },
+  },
+  {
+    id: 16,
+    name: 'Frozen Ocean',
+    desc: 'A flat white sea. The ice is alive — it cracks, it splits, it throws shards at the sky.',
+    duration: 2900,
+    palette: {
+      skyTop: '#0a1828', skyMid: '#3a6890', skyLow: '#a8d8e8',
+      sun: { x: 0.74, y: 0.36, r: 50, color: 'rgba(220,240,255,0.85)' },
+      mountainFar: 'rgba(140,180,210,0.5)',
+      mountainMid: 'rgba(100,150,190,0.75)',
+      mountainNear: ['#a8c8e0','#5080a8','#1a3858'],
+      snowCap: '#ffffff',
+      stars: 12,
+      starColor: '220,240,255',
+      vignette: 0.4,
+    },
+    weather: { type: 'snow' },
+    hazards: ['peakBottom', 'peakTop', 'icicle', 'waterspout'],
+    boss: {
+      name: 'Glacier Kraken',
+      duration: 38,
+      attacks: ['icicle', 'iceWall', 'waterspout', 'gust'],
+      tint: '#3a6890',
+      accent: '#ffffff',
+    },
+  },
+  {
+    id: 17,
+    name: 'Solar Corona',
+    desc: 'Skimming the sun. The light is a wall. Solar flares arc across the sky — feel the heat.',
+    duration: 3000,
+    palette: {
+      skyTop: '#5a1810', skyMid: '#e85820', skyLow: '#ffd870',
+      sun: { x: 0.5, y: 0.5, r: 180, color: 'rgba(255,250,200,0.98)' },
+      mountainFar: 'rgba(180,80,30,0.5)',
+      mountainMid: 'rgba(140,50,20,0.7)',
+      mountainNear: ['#a83018','#681808','#280804'],
+      snowCap: 'rgba(255,220,160,0.85)',
+      stars: 0,
+      starColor: '255,255,200',
+      vignette: 0.45,
+    },
+    weather: { type: 'ash' },
+    hazards: ['peakBottom', 'fireball', 'meteor', 'asteroid'],
+    boss: {
+      name: 'Solar Phoenix',
+      duration: 40,
+      attacks: ['fireball', 'beam', 'asteroid', 'lavaWall'],
+      tint: '#e85820',
+      accent: '#fff8c8',
+    },
+  },
+  {
+    id: 18,
+    name: 'Nebula Drift',
+    desc: 'Through the gas clouds where stars are born. Beautiful, silent, and crawling with patrol drones.',
+    duration: 3100,
+    palette: {
+      skyTop: '#080018', skyMid: '#3a1060', skyLow: '#a83870',
+      sun: null,
+      mountainFar: 'rgba(120,40,100,0.4)',
+      mountainMid: 'rgba(80,20,80,0.6)',
+      mountainNear: ['#a83878','#601848','#180828'],
+      snowCap: '#ffa8d8',
+      stars: 280,
+      starColor: '255,200,255',
+      vignette: 0.55,
+      aurora: true,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'drone', 'meteor', 'asteroid'],
+    boss: {
+      name: 'Nebula Hydra',
+      duration: 42,
+      attacks: ['droneSwarm', 'beam', 'asteroid', 'lightning'],
+      tint: '#3a1060',
+      accent: '#ff80c0',
+    },
+  },
+  {
+    id: 19,
+    name: 'Black Hole Edge',
+    desc: 'The accretion disk. Light bends. Time bends. Everything bends — except your line.',
+    duration: 3200,
+    palette: {
+      skyTop: '#000000', skyMid: '#000000', skyLow: '#1a0a08',
+      sun: { x: 0.5, y: 0.5, r: 120, color: 'rgba(0,0,0,1)' },
+      mountainFar: 'rgba(60,30,10,0.4)',
+      mountainMid: 'rgba(80,40,10,0.6)',
+      mountainNear: ['#a86018','#683008','#180a04'],
+      snowCap: '#ffaa40',
+      stars: 380,
+      starColor: '255,255,255',
+      vignette: 0.7,
+      aurora: true,
+    },
+    weather: { type: 'none' },
+    hazards: ['peakBottom', 'drone', 'meteor', 'asteroid', 'lightning'],
+    boss: {
+      name: 'Event Horizon',
+      duration: 44,
+      attacks: ['beam', 'asteroid', 'droneSwarm', 'lightning', 'gust'],
+      tint: '#000000',
+      accent: '#ffaa40',
+    },
+  },
+  {
+    id: 20,
+    name: 'Heaven\u2019s Gate',
+    desc: 'The end of the campaign. A pure white light. One pilot, one final crossing.',
+    duration: 3500,
+    palette: {
+      skyTop: '#a8c8e8', skyMid: '#f8f0e0', skyLow: '#ffffff',
+      sun: { x: 0.5, y: 0.5, r: 220, color: 'rgba(255,255,255,1)' },
+      mountainFar: 'rgba(220,230,240,0.5)',
+      mountainMid: 'rgba(200,215,230,0.7)',
+      mountainNear: ['#e8eef8','#b8c8e0','#7898c0'],
+      snowCap: '#ffffff',
+      stars: 80,
+      starColor: '255,255,255',
+      vignette: 0.3,
+      aurora: true,
+    },
+    weather: { type: 'snow' },
+    hazards: ['peakBottom', 'peakTop', 'drone', 'meteor', 'asteroid', 'lightning', 'fireball'],
+    boss: {
+      name: 'The Architect',
+      duration: 50,
+      attacks: ['beam', 'droneSwarm', 'asteroid', 'lightning', 'fireball', 'iceWall'],
+      tint: '#f0f4fa',
+      accent: '#ffd870',
+    },
+  },
+];
+
+// ============================================================
+// AUDIO SYSTEM — Procedural Web Audio
+// ============================================================
+
+const audio = {
+  ctx: null,
+  enabled: true,
+  muted: false,
+  master: null,
+  ensure() {
+    if (!this.ctx) {
+      try {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.55;
+        this.master.connect(this.ctx.destination);
+      } catch(e) { this.enabled = false; }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  blip({ freq=440, dur=0.15, type='sine', vol=0.1, attack=0.005, slide=0 }) {
+    if (!this.enabled || this.muted) return;
+    this.ensure();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, now);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq * slide), now + dur);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol, now + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(now); o.stop(now + dur + 0.05);
+  },
+  noise({ dur=0.2, vol=0.1, filterFreq=800 }) {
+    if (!this.enabled || this.muted) return;
+    this.ensure();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = filterFreq;
+    const g = this.ctx.createGain();
+    g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(now);
+  },
+  ringChime() {
+    this.blip({ freq: 1100, type: 'triangle', dur: 0.18, vol: 0.09 });
+    setTimeout(() => this.blip({ freq: 1650, type: 'triangle', dur: 0.16, vol: 0.07 }), 55);
+  },
+  pickup() {
+    [880, 1175, 1480].forEach((f, i) => {
+      setTimeout(() => this.blip({ freq: f, type: 'sine', dur: 0.13, vol: 0.1 }), i * 55);
+    });
+  },
+  hit() {
+    this.blip({ freq: 90, type: 'sawtooth', dur: 0.32, vol: 0.16, slide: 0.4 });
+    this.noise({ dur: 0.22, vol: 0.08, filterFreq: 600 });
+  },
+  bossEnter() {
+    [55, 75, 95, 110].forEach((f, i) => {
+      setTimeout(() => this.blip({ freq: f, type: 'sawtooth', dur: 0.45, vol: 0.18 }), i * 180);
+    });
+  },
+  bossDefeat() {
+    [220, 330, 440, 550, 660].forEach((f, i) => {
+      setTimeout(() => this.blip({ freq: f, type: 'triangle', dur: 0.4, vol: 0.13 }), i * 110);
+    });
+  },
+  levelComplete() {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      setTimeout(() => this.blip({ freq: f, type: 'triangle', dur: 0.35, vol: 0.12 }), i * 130);
+    });
+  },
+  powerup() {
+    [600, 900, 1200, 1500].forEach((f, i) => {
+      setTimeout(() => this.blip({ freq: f, type: 'square', dur: 0.09, vol: 0.06 }), i * 50);
+    });
+  },
+  comboBeep(n) {
+    const f = 600 + Math.min(n, 8) * 80;
+    this.blip({ freq: f, type: 'triangle', dur: 0.12, vol: 0.08 });
+  },
+  thunder() {
+    this.blip({ freq: 60, type: 'sawtooth', dur: 0.5, vol: 0.16, slide: 0.3 });
+    this.noise({ dur: 0.6, vol: 0.1, filterFreq: 800 });
+  },
+  victory() {
+    [392, 523, 659, 784, 988, 1175].forEach((f, i) => {
+      setTimeout(() => this.blip({ freq: f, type: 'triangle', dur: 0.5, vol: 0.13 }), i * 180);
+    });
+  },
+};
+
+// ============================================================
+// GAME STATE
+// ============================================================
+
+const STATE = {
+  MENU: 'menu',
+  LEVEL_INTRO: 'levelIntro',
+  PLAYING: 'playing',
+  LEVEL_COMPLETE: 'levelComplete',
+  GAME_OVER: 'gameOver',
+  VICTORY: 'victory',
+  PAUSED: 'paused',
+};
+
+let state = STATE.MENU;
+let prevState = STATE.MENU;
+let levelIdx = 0;          // index into LEVELS
+let level = LEVELS[0];     // current level config
+let inBoss = false;
+let bossT = 0;             // time elapsed in boss
+let bossHP = 1;            // 1 → 0
+let bossPhase = 1;
+let bossNextAttack = 0;
+
+// Player
+const plane = {
+  x: 0, y: 0, vx: 0, vy: 0,
+  tilt: 0,
+  invuln: 0,
+  boostFlash: 0,
+};
+
+// Run stats
+let baseSpeed = 4.4;
+let speed = baseSpeed;
+let distance = 0;          // distance within current level
+let totalDistance = 0;
+let score = 0;
+let stageScore = 0;
+const MAX_LIVES = 9;
+let lives = 3;
+let rings = 0;
+let stageRings = 0;
+let passengers = 0;
+let stagePax = 0;
+let bestCombo = 0;
+let stageBestCombo = 0;
+
+// Combo
+let combo = 0;
+let comboTimer = 0;
+const COMBO_WINDOW = 4;    // seconds
+
+// Power-ups (active effects)
+const powerups = {
+  shield:  { active: false, t: 0, max: 0 },
+  magnet:  { active: false, t: 0, max: 12 },
+  x2:      { active: false, t: 0, max: 12 },
+  slow:    { active: false, t: 0, max: 8 },
+};
+
+// Entities
+let cloudRings = [];
+let mountains = [];
+let pickups = [];          // passengers
+let powerupDrops = [];     // power-up drops
+let particles = [];
+let hazards = [];          // lightning, icicles, drones, fireballs, etc.
+let bossAttacks = [];      // active boss attack instances
+let bgClouds = [];
+let stars = [];
+let auroraRibbons = [];
+let weatherParticles = [];
+
+// Spawner timers
+let nextRing = 60;
+let nextMountain = 240;
+let nextPassenger = 380;
+let nextPowerup = 1100;
+let nextHazard = 600;
+
+// Camera shake
+let shakeT = 0;
+let shakeMag = 0;
+
+// Time
+let time = 0;
+let levelTime = 0;
+
+// Performance auto-scaling
+let frameTimes = [];
+let avgFps = 60;
+let qualityLevel = 'high';   // high | medium | low
+let particleCap = 800;
+let weatherCapMul = 1.0;
+
+// Records
+let highScore = 0;
+let bestCampaignScore = 0;
+
+// ============================================================
+// INPUT
+// ============================================================
+
+const keys = {};
+let touchActive = false;
+let touchY = 0;
+let touchX = 0;
+
+function handleStartKey() {
+  if (state === STATE.MENU) goToLevelIntro(0);
+  else if (state === STATE.LEVEL_INTRO) startPlaying();
+  else if (state === STATE.LEVEL_COMPLETE) {
+    if (levelIdx + 1 < LEVELS.length) goToLevelIntro(levelIdx + 1);
+    else goToVictory();
+  } else if (state === STATE.GAME_OVER) goToMenu();
+  else if (state === STATE.VICTORY) goToMenu();
+  else if (state === STATE.PAUSED) togglePause();
+}
+
+window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)) e.preventDefault();
+  if (k === ' ' || k === 'enter') handleStartKey();
+  if (k === 'p') {
+    if (state === STATE.PLAYING) togglePause();
+    else if (state === STATE.PAUSED) togglePause();
+  }
+  if (k === 'm') toggleMute();
+  if (k === 'f') toggleFullscreen();
+}, { passive: false });
+
+window.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  touchActive = true;
+  if (e.touches[0]) {
+    touchY = e.touches[0].clientY;
+    touchX = e.touches[0].clientX;
+  }
+  handleStartKey();
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (e.touches[0]) {
+    touchY = e.touches[0].clientY;
+    touchX = e.touches[0].clientX;
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', () => { touchActive = false; });
+canvas.addEventListener('touchcancel', () => { touchActive = false; });
+
+// Mobile boost button — sets the same flag SPACE uses
+const boostBtn = document.getElementById('mobileBoost');
+const setBoost = (on) => {
+  keys[' '] = on;
+  boostBtn.classList.toggle('pressed', on);
+};
+boostBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setBoost(true);
+  // First-tap audio unlock on iOS
+  audio.ensure();
+}, { passive: false });
+boostBtn.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setBoost(false);
+}, { passive: false });
+boostBtn.addEventListener('touchcancel', () => setBoost(false));
+
+// Click overlays to advance
+['menuScreen','levelIntroScreen','levelCompleteScreen','gameOverScreen','victoryScreen','pauseScreen']
+  .forEach(id => document.getElementById(id).addEventListener('click', handleStartKey));
+
+document.getElementById('muteBtn').addEventListener('click', toggleMute);
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  if (state === STATE.PLAYING || state === STATE.PAUSED) togglePause();
+});
+document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+
+function toggleFullscreen() {
+  const el = document.documentElement;
+  const inFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!inFs) {
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+}
+
+function toggleMute() {
+  audio.muted = !audio.muted;
+  document.getElementById('muteBtn').classList.toggle('muted', audio.muted);
+  document.getElementById('muteBtn').textContent = audio.muted ? '✕' : '♪';
+}
+
+function togglePause() {
+  if (state === STATE.PLAYING) {
+    prevState = state;
+    state = STATE.PAUSED;
+    showOverlay('pauseScreen');
+    document.getElementById('pauseStage').textContent = `Stage ${levelIdx + 1} / ${LEVELS.length}`;
+  } else if (state === STATE.PAUSED) {
+    state = prevState;
+    hideAllOverlays();
+  }
+}
+
+// ============================================================
+// OVERLAY HELPERS
+// ============================================================
+
+function showOverlay(id) {
+  hideAllOverlays();
+  document.getElementById(id).classList.add('visible');
+}
+
+function hideAllOverlays() {
+  ['menuScreen','levelIntroScreen','levelCompleteScreen','gameOverScreen','victoryScreen','pauseScreen']
+    .forEach(x => document.getElementById(x).classList.remove('visible'));
+}
+
+// ============================================================
+// GAME FLOW
+// ============================================================
+
+function goToMenu() {
+  state = STATE.MENU;
+  levelIdx = 0;
+  // reset campaign totals
+  score = 0;
+  rings = 0;
+  passengers = 0;
+  bestCombo = 0;
+  showOverlay('menuScreen');
+}
+
+function goToLevelIntro(idx) {
+  audio.ensure();
+  levelIdx = idx;
+  level = LEVELS[levelIdx];
+  state = STATE.LEVEL_INTRO;
+
+  // populate intro card
+  document.getElementById('liNum').textContent =
+    `Stage ${String(levelIdx + 1).padStart(2,'0')} of ${String(LEVELS.length).padStart(2,'0')}`;
+  document.getElementById('liName').textContent = level.name;
+  document.getElementById('liDesc').textContent = level.desc;
+  document.getElementById('liBoss').textContent = level.boss.name;
+
+  const objContainer = document.getElementById('liObjectives');
+  objContainer.innerHTML = '';
+  const objList = [
+    { icon: '◇', label: `${(level.duration/100).toFixed(1)} km · sky stretch` },
+    { icon: '○', label: `Cloud rings · score chain` },
+    { icon: '◆', label: `Passenger pickups · bonus` },
+    { icon: '▼', label: `${level.boss.name} · ${level.boss.duration}s encounter` },
+  ];
+  objList.forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'obj-pill';
+    el.innerHTML = `<span class="obj-icon">${o.icon}</span>${o.label}`;
+    objContainer.appendChild(el);
+  });
+
+  showOverlay('levelIntroScreen');
+}
+
+function startPlaying() {
+  state = STATE.PLAYING;
+  hideAllOverlays();
+
+  // Reset per-level state
+  plane.x = W * 0.22;
+  plane.y = H * 0.5;
+  plane.vx = 0;
+  plane.vy = 0;
+  plane.tilt = 0;
+  plane.invuln = 80;
+  plane.boostFlash = 0;
+
+  // First level: full lives reset. Subsequent: keep lives.
+  if (levelIdx === 0) {
+    lives = 3;
+    score = 0;
+    rings = 0;
+    passengers = 0;
+    bestCombo = 0;
+  }
+
+  speed = baseSpeed;
+  distance = 0;
+  levelTime = 0;
+  inBoss = false;
+  bossT = 0;
+  bossHP = 1;
+  bossPhase = 1;
+  bossNextAttack = 1.0;
+  stageScore = 0;
+  stageRings = 0;
+  stagePax = 0;
+  stageBestCombo = 0;
+
+  combo = 0;
+  comboTimer = 0;
+
+  // Wipe entities
+  cloudRings = [];
+  mountains = [];
+  pickups = [];
+  powerupDrops = [];
+  particles = [];
+  hazards = [];
+  bossAttacks = [];
+  weatherParticles = [];
+  nextRing = 80;
+  nextMountain = 280;
+  nextPassenger = 420;
+  nextPowerup = 1100 + Math.random() * 600;
+  nextHazard = level.hazards.length > 2 ? 700 : 9999;
+
+  // Reset powerups
+  for (const k in powerups) {
+    powerups[k].active = false;
+    powerups[k].t = 0;
+  }
+
+  // Init ambient
+  initAmbient();
+  updateLivesUI();
+  updatePowerupUI();
+  document.getElementById('bossBanner').classList.remove('visible');
+  document.getElementById('missionTracker').classList.add('visible');
+  updateMissionTracker();
+
+  audio.bossEnter();  // small woosh on launch (engine spin-up)
+}
+
+function goToLevelComplete() {
+  state = STATE.LEVEL_COMPLETE;
+  document.getElementById('lcNum').textContent = String(levelIdx + 1);
+  document.getElementById('lcScore').textContent = stageScore.toLocaleString();
+  document.getElementById('lcRings').textContent = stageRings;
+  document.getElementById('lcPax').textContent = stagePax;
+  document.getElementById('lcCombo').textContent = '×' + stageBestCombo;
+  document.getElementById('lcRecord').textContent =
+    levelIdx + 1 < LEVELS.length ? `Next · ${LEVELS[levelIdx + 1].name}` : `Final score · ${score.toLocaleString()}`;
+  document.getElementById('missionTracker').classList.remove('visible');
+  showOverlay('levelCompleteScreen');
+  audio.levelComplete();
+}
+
+function goToGameOver() {
+  state = STATE.GAME_OVER;
+  document.getElementById('goScore').textContent = score.toLocaleString();
+  document.getElementById('goStage').textContent = String(levelIdx + 1);
+  document.getElementById('goRings').textContent = rings;
+  document.getElementById('goCombo').textContent = '×' + bestCombo;
+
+  let msg = '';
+  if (score > highScore) { highScore = score; msg = '✦ NEW RECORD'; }
+  else if (highScore > 0) msg = `Record · ${highScore.toLocaleString()}`;
+  document.getElementById('goRecord').textContent = msg;
+
+  document.getElementById('missionTracker').classList.remove('visible');
+  document.getElementById('bossBanner').classList.remove('visible');
+  showOverlay('gameOverScreen');
+}
+
+function goToVictory() {
+  state = STATE.VICTORY;
+  document.getElementById('vScore').textContent = score.toLocaleString();
+  document.getElementById('vRings').textContent = rings;
+  document.getElementById('vPax').textContent = passengers;
+  document.getElementById('vCombo').textContent = '×' + bestCombo;
+  if (score > bestCampaignScore) bestCampaignScore = score;
+  document.getElementById('missionTracker').classList.remove('visible');
+  document.getElementById('bossBanner').classList.remove('visible');
+  showOverlay('victoryScreen');
+  audio.victory();
+}
+
+// ============================================================
+// AMBIENT INIT
+// ============================================================
+
+function initAmbient() {
+  bgClouds = [];
+  for (let i = 0; i < 9; i++) {
+    bgClouds.push({
+      x: Math.random() * W,
+      y: H * 0.18 + Math.random() * H * 0.32,
+      scale: 0.4 + Math.random() * 0.7,
+      speed: 0.15 + Math.random() * 0.5,
+    });
+  }
+  stars = [];
+  const sc = level && level.palette.stars || 30;
+  for (let i = 0; i < sc; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H * 0.45,
+      r: Math.random() * 1.3 + 0.3,
+      tw: Math.random() * Math.PI * 2,
+    });
+  }
+  auroraRibbons = [];
+  if (level && level.palette.aurora) {
+    for (let i = 0; i < 3; i++) {
+      auroraRibbons.push({
+        y: H * (0.18 + i * 0.07),
+        amp: 60 + i * 30,
+        freq: 0.003 + i * 0.001,
+        phase: Math.random() * Math.PI * 2,
+        hue: i === 0 ? '0,255,170' : (i === 1 ? '184,124,245' : '127,219,218'),
+        speed: 0.08 + i * 0.04,
+      });
+    }
+  }
+}
+
+// ============================================================
+// SPAWNERS
+// ============================================================
+
+function spawnRing() {
+  const baseGap = 130 + Math.random() * 30;
+  const tighten = Math.min(distance / 1000, 30) + levelIdx * 5;
+  cloudRings.push({
+    x: W + 80,
+    y: H * 0.22 + Math.random() * H * 0.56,
+    gap: Math.max(95, baseGap - tighten),
+    passed: false,
+    bobPhase: Math.random() * Math.PI * 2,
+  });
+}
+
+function spawnMountain() {
+  const fromTop = Math.random() < 0.32;
+  const peakHeight = (fromTop ? 70 : 130) + Math.random() * (fromTop ? 130 : 220);
+  mountains.push({
+    x: W + 100,
+    width: 170 + Math.random() * 140,
+    height: peakHeight,
+    fromTop,
+  });
+}
+
+function spawnPassenger() {
+  pickups.push({
+    x: W + 40,
+    y: H * 0.22 + Math.random() * H * 0.56,
+    bob: Math.random() * Math.PI * 2,
+    pulse: 0,
+    collected: false,
+  });
+}
+
+function spawnPowerup() {
+  const types = ['shield','magnet','x2','slow'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  powerupDrops.push({
+    x: W + 40,
+    y: H * 0.25 + Math.random() * H * 0.5,
+    type,
+    bob: Math.random() * Math.PI * 2,
+    spin: 0,
+    collected: false,
+  });
+}
+
+function spawnHazard() {
+  // Pick from level's hazards (excluding peakBottom/peakTop which are mountains)
+  const set = level.hazards.filter(h => !h.startsWith('peak'));
+  if (!set.length) return;
+  const h = set[Math.floor(Math.random() * set.length)];
+  if (h === 'icicle') spawnIcicle();
+  else if (h === 'lightning') spawnLightning();
+  else if (h === 'drone') spawnDrone();
+  else if (h === 'meteor') spawnMeteor();
+  else if (h === 'fireball') spawnFireball();
+  else if (h === 'ashCloud') spawnAshCloud();
+  else if (h === 'asteroid') spawnAsteroid();
+  else if (h === 'waterspout') spawnWaterspout();
+}
+
+function spawnAsteroid() {
+  hazards.push({
+    type: 'asteroid',
+    x: W + 60,
+    y: H * 0.2 + Math.random() * H * 0.6,
+    vx: -2.2 - Math.random() * 1.4,
+    vy: (Math.random() - 0.5) * 0.6,
+    size: 16 + Math.random() * 10,
+    rot: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.05,
+  });
+}
+
+function spawnWaterspout() {
+  hazards.push({
+    type: 'waterspout',
+    x: W * 0.5 + Math.random() * W * 0.5,
+    telegraphT: 1.0,
+    riseT: 0,
+    height: 0,
+  });
+}
+
+function spawnIcicle() {
+  hazards.push({
+    type: 'icicle',
+    x: W + Math.random() * 200,
+    y: 0,
+    vy: 0,
+    telegraphT: 0.8,
+    fallT: 0,
+  });
+}
+
+function spawnLightning() {
+  hazards.push({
+    type: 'lightning',
+    x: W + 100 + Math.random() * 200,
+    telegraphT: 1.0,
+    strikeT: 0,
+    flashAlpha: 0,
+  });
+}
+
+function spawnDrone() {
+  hazards.push({
+    type: 'drone',
+    x: W + 60,
+    baseY: H * 0.25 + Math.random() * H * 0.5,
+    yPhase: Math.random() * Math.PI * 2,
+    yAmp: 60 + Math.random() * 40,
+    speed: 1 + Math.random() * 1.5,
+  });
+}
+
+function spawnMeteor() {
+  hazards.push({
+    type: 'meteor',
+    x: W + 60,
+    y: -20,
+    vx: -3 - Math.random() * 2,
+    vy: 2 + Math.random() * 2,
+    size: 6 + Math.random() * 4,
+    trail: [],
+  });
+}
+
+function spawnFireball() {
+  hazards.push({
+    type: 'fireball',
+    x: W * 0.6 + Math.random() * W * 0.5,
+    y: H + 20,
+    vx: -1.5 - Math.random() * 1,
+    vy: -7 - Math.random() * 3,
+    size: 10 + Math.random() * 5,
+    life: 4,
+  });
+}
+
+function spawnAshCloud() {
+  hazards.push({
+    type: 'ashCloud',
+    x: W + 80,
+    y: H * 0.2 + Math.random() * H * 0.6,
+    w: 110 + Math.random() * 70,
+    h: 50 + Math.random() * 30,
+  });
+}
+
+// Floating score popup (DOM)
+function popScore(amount, x, y, cls) {
+  const el = document.createElement('div');
+  el.className = 'float-score' + (cls ? ' ' + cls : '');
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.textContent = '+' + amount;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1100);
+}
+
+// ============================================================
+// COMBO
+// ============================================================
+
+function bumpCombo() {
+  combo++;
+  comboTimer = COMBO_WINDOW;
+  if (combo > stageBestCombo) stageBestCombo = combo;
+  if (combo > bestCombo) bestCombo = combo;
+  const el = document.getElementById('comboEl');
+  el.classList.add('active', 'pop');
+  setTimeout(() => el.classList.remove('pop'), 200);
+  audio.comboBeep(combo);
+}
+
+function resetCombo() {
+  combo = 0;
+  comboTimer = 0;
+  document.getElementById('comboEl').classList.remove('active');
+}
+
+function comboMultiplier() {
+  if (combo < 2) return 1;
+  if (combo < 4) return 2;
+  if (combo < 7) return 3;
+  return 4;
+}
+
+// ============================================================
+// SCREEN SHAKE
+// ============================================================
+
+function shake(mag, dur) {
+  shakeMag = Math.max(shakeMag, mag);
+  shakeT = Math.max(shakeT, dur);
+}
+
+// ============================================================
+// COLLISION / DAMAGE
+// ============================================================
+
+function takeHit(reason) {
+  if (plane.invuln > 0) return;
+
+  // Shield absorbs
+  if (powerups.shield.active) {
+    powerups.shield.active = false;
+    powerups.shield.t = 0;
+    plane.invuln = 60;
+    shake(8, 0.3);
+    audio.hit();
+    for (let i = 0; i < 24; i++) {
+      particles.push({
+        x: plane.x, y: plane.y,
+        vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5,
+        life: 1, size: 2+Math.random()*2,
+        type: 'spark', color: '#7fdbda',
+      });
+    }
+    updatePowerupUI();
+    return;
+  }
+
+  lives--;
+  resetCombo();
+  plane.invuln = 110;
+  plane.vy = -3;
+  shake(14, 0.5);
+  audio.hit();
+  for (let i = 0; i < 36; i++) {
+    particles.push({
+      x: plane.x, y: plane.y,
+      vx: (Math.random()-0.5)*8,
+      vy: (Math.random()-0.5)*8,
+      life: 1.4,
+      size: 2+Math.random()*3,
+      type: 'spark',
+      color: i % 2 ? '#e63946' : '#ffb951',
+    });
+  }
+  updateLivesUI();
+  if (lives <= 0) {
+    setTimeout(goToGameOver, 700);
+  }
+}
+
+// ============================================================
+// UI SYNC
+// ============================================================
+
+function updateLivesUI() {
+  const lp = document.getElementById('livesEl');
+  lp.innerHTML = '';
+  // Always render at least 3 slots so the HUD doesn't shrink, then add
+  // extra filled pips up to MAX_LIVES.
+  const slots = Math.max(3, Math.min(lives, MAX_LIVES));
+  for (let i = 0; i < slots; i++) {
+    const d = document.createElement('div');
+    d.className = 'life-pip' + (i < lives ? ' filled' : '');
+    lp.appendChild(d);
+  }
+}
+
+function updatePowerupUI() {
+  const tray = document.getElementById('pupTray');
+  tray.innerHTML = '';
+  const order = ['shield','magnet','x2','slow'];
+  const icons = { shield: '◉', magnet: '◈', x2: '×2', slow: '◐' };
+  for (const k of order) {
+    if (!powerups[k].active) continue;
+    const el = document.createElement('div');
+    el.className = 'pup ' + k;
+    el.innerHTML = `<span>${icons[k]}</span><div class="pup-bar"><div class="pup-bar-fill"></div></div>`;
+    tray.appendChild(el);
+    const fill = el.querySelector('.pup-bar-fill');
+    const ratio = powerups[k].max > 0 ? Math.max(0, powerups[k].t / powerups[k].max) : 1;
+    fill.style.transform = `scaleX(${ratio})`;
+  }
+}
+
+function updateMissionTracker() {
+  const el = document.getElementById('missionTracker');
+  if (inBoss) {
+    el.innerHTML = `
+      <div class="mission-line"><span class="mission-icon">▼</span>${level.boss.name} · <span class="mission-count">${Math.max(0, Math.ceil(level.boss.duration - bossT))}s</span></div>
+    `;
+  } else {
+    const distLeft = Math.max(0, level.duration - distance);
+    el.innerHTML = `
+      <div class="mission-line"><span class="mission-icon">◇</span>${level.name} · <span class="mission-count">${(distLeft/100).toFixed(1)} km</span></div>
+      <div class="mission-line"><span class="mission-icon">○</span>Rings · <span class="mission-count">${stageRings}</span></div>
+      <div class="mission-line"><span class="mission-icon">◆</span>Passengers · <span class="mission-count">${stagePax}</span></div>
+    `;
+  }
+}
+
+// ============================================================
+// UPDATE
+// ============================================================
+
+function update(dt) {
+  time += dt;
+
+  // Always-update ambient
+  for (const c of bgClouds) {
+    c.x -= c.speed * (state === STATE.PLAYING ? speed : baseSpeed) * 0.15;
+    if (c.x < -180) {
+      c.x = W + 60;
+      c.y = H * 0.18 + Math.random() * H * 0.32;
+      c.scale = 0.4 + Math.random() * 0.7;
+    }
+  }
+  for (const s of stars) s.tw += dt * 2;
+  for (const r of auroraRibbons) r.phase += dt * r.speed * 6;
+
+  // Camera shake decay
+  if (shakeT > 0) {
+    shakeT -= dt;
+    if (shakeT <= 0) { shakeT = 0; shakeMag = 0; }
+  }
+
+  if (state !== STATE.PLAYING) return;
+
+  levelTime += dt;
+
+  // Slow-time effect
+  const timeMul = powerups.slow.active ? 0.55 : 1;
+  const stepDt = dt * timeMul;
+
+  // Difficulty / speed
+  speed = (baseSpeed + Math.min(distance / 1500, 4)) * timeMul;
+
+  // ===== Plane control =====
+  let inputY = 0;
+  let inputX = 0;
+  if (keys['arrowup']    || keys['w']) inputY -= 1;
+  if (keys['arrowdown']  || keys['s']) inputY += 1;
+  if (keys['arrowleft']  || keys['a']) inputX -= 1;
+  if (keys['arrowright'] || keys['d']) inputX += 1;
+  if (touchActive) {
+    const dy = touchY - plane.y;
+    const dx = touchX - plane.x;
+    inputY = Math.max(-1, Math.min(1, dy / 50));
+    inputX = Math.max(-1, Math.min(1, dx / 80));
+  }
+  const boosting = !!keys[' '];
+  const boostMul = boosting ? 1.45 : 1;
+  if (boosting) plane.boostFlash = Math.min(1, plane.boostFlash + 0.2);
+  else plane.boostFlash *= 0.9;
+
+  // Vertical
+  plane.vy += inputY * 0.48 * boostMul;
+  plane.vy *= 0.92;
+  plane.y  += plane.vy;
+
+  // Horizontal — slightly less sensitive than pitch so the plane feels heavy
+  plane.vx += inputX * 0.42 * boostMul;
+  plane.vx *= 0.90;
+  plane.x  += plane.vx;
+
+  const targetTilt = Math.max(-0.42, Math.min(0.42, plane.vy * 0.09));
+  plane.tilt += (targetTilt - plane.tilt) * 0.18;
+
+  // Vertical bounds
+  const margin = 24;
+  if (plane.y < margin)     { plane.y = margin;     plane.vy *= -0.3; }
+  if (plane.y > H - margin) { plane.y = H - margin; plane.vy *= -0.3; }
+
+  // Danger zones — prevent edge-hugging exploit
+  // Each level has a hazardous band at top and bottom (8% of screen height each)
+  // Entering these zones causes damage with a short cooldown
+  const dangerBand = H * 0.08;
+  const dangerTopY = dangerBand;
+  const dangerBotY = H - dangerBand;
+  if (plane.invuln === 0) {
+    if (plane.y < dangerTopY || plane.y > dangerBotY) {
+      takeHit('edge');
+      // bounce away from the edge so the player isn't trapped there
+      if (plane.y < dangerTopY) plane.vy = 4;
+      else plane.vy = -4;
+    }
+  }
+
+  // Horizontal bounds — keep plane on left/center side of screen
+  // so spawners coming from the right still work
+  const xMin = W * 0.10;
+  const xMax = W * 0.65;
+  if (plane.x < xMin) { plane.x = xMin; plane.vx *= -0.3; }
+  if (plane.x > xMax) { plane.x = xMax; plane.vx *= -0.3; }
+
+  if (plane.invuln > 0) plane.invuln--;
+
+  // Trail particles
+  if (Math.random() < (boosting ? 1.0 : 0.7)) {
+    particles.push({
+      x: plane.x - 30, y: plane.y + 6,
+      vx: -1.2 - Math.random()*1.6, vy: (Math.random()-0.5)*0.6,
+      life: 1, size: 2.5 + Math.random()*3, type: 'vapor',
+    });
+  }
+  if (boosting && Math.random() < 0.6) {
+    particles.push({
+      x: plane.x - 32, y: plane.y + 10,
+      vx: -2 - Math.random()*2, vy: (Math.random()-0.5)*0.5,
+      life: 0.6, size: 2 + Math.random()*2, type: 'spark',
+      color: '#ffb951',
+    });
+  }
+
+  // ===== Distance / score =====
+  distance += speed * 0.4;
+  totalDistance += speed * 0.4;
+  const passiveScore = Math.floor(speed * 0.05);
+  score += passiveScore;
+  stageScore += passiveScore;
+
+  // ===== Boss trigger =====
+  if (!inBoss && distance >= level.duration) {
+    enterBoss();
+  }
+
+  // ===== Combo decay =====
+  if (combo > 0) {
+    comboTimer -= dt;
+    const fill = document.getElementById('comboTimerFill');
+    fill.style.transform = `scaleX(${Math.max(0, comboTimer / COMBO_WINDOW)})`;
+    document.getElementById('comboMult').textContent = comboMultiplier();
+    if (comboTimer <= 0) resetCombo();
+  }
+
+  // ===== Powerup timers =====
+  for (const k in powerups) {
+    if (powerups[k].active && powerups[k].max > 0) {
+      powerups[k].t -= dt;
+      if (powerups[k].t <= 0) {
+        powerups[k].active = false;
+        powerups[k].t = 0;
+      }
+    }
+  }
+  updatePowerupUI();
+
+  // ===== Spawning (only outside boss) =====
+  if (!inBoss) {
+    nextRing -= speed;
+    if (nextRing <= 0) { spawnRing(); nextRing = 200 + Math.random() * 150; }
+
+    nextMountain -= speed;
+    if (nextMountain <= 0) { spawnMountain(); nextMountain = 290 + Math.random() * 220; }
+
+    nextPassenger -= speed;
+    if (nextPassenger <= 0) { spawnPassenger(); nextPassenger = 480 + Math.random() * 380; }
+
+    nextPowerup -= speed;
+    if (nextPowerup <= 0) { spawnPowerup(); nextPowerup = 1400 + Math.random() * 800; }
+
+    nextHazard -= speed;
+    if (nextHazard <= 0) {
+      spawnHazard();
+      nextHazard = 480 + Math.random() * 420;
+    }
+  } else {
+    // Boss update
+    updateBoss(dt);
+  }
+
+  // ===== Cloud rings =====
+  for (const r of cloudRings) {
+    r.x -= speed;
+    r.bobPhase += dt * 1.5;
+    if (!r.passed && r.x < plane.x - 28) {
+      r.passed = true;
+      if (plane.y > r.y - r.gap/2 && plane.y < r.y + r.gap/2) {
+        bumpCombo();
+        const mult = comboMultiplier() * (powerups.x2.active ? 2 : 1);
+        const pts = 25 * mult;
+        score += pts; stageScore += pts;
+        rings++; stageRings++;
+        popScore(pts, plane.x, plane.y, 'cyan');
+        audio.ringChime();
+        for (let i = 0; i < 16; i++) {
+          particles.push({
+            x: plane.x, y: plane.y,
+            vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4,
+            life: 1, size: 2+Math.random()*2,
+            type: 'spark', color: '#7fdbda',
+          });
+        }
+      }
+    }
+  }
+  cloudRings = cloudRings.filter(r => r.x > -180);
+
+  // ===== Passengers =====
+  for (const p of pickups) {
+    p.x -= speed;
+    p.bob += dt * 3;
+    p.pulse += dt * 4;
+    // Magnet effect
+    if (powerups.magnet.active && !p.collected) {
+      const dx = plane.x - p.x;
+      const dy = plane.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 200) {
+        p.x += (dx/d) * 4;
+        p.y += (dy/d) * 4;
+      }
+    }
+    if (!p.collected) {
+      const dx = p.x - plane.x;
+      const dy = (p.y + Math.sin(p.bob)*8) - plane.y;
+      if (Math.abs(dx) < 28 && Math.abs(dy) < 22) {
+        p.collected = true;
+        bumpCombo();
+        const mult = comboMultiplier() * (powerups.x2.active ? 2 : 1);
+        const pts = 100 * mult;
+        score += pts; stageScore += pts;
+        passengers++; stagePax++;
+        popScore(pts, p.x, p.y, '');
+        audio.pickup();
+        for (let i = 0; i < 22; i++) {
+          particles.push({
+            x: p.x, y: p.y,
+            vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5 - 1,
+            life: 1.2, size: 2+Math.random()*2.5,
+            type: 'spark', color: '#ffb951',
+          });
+        }
+      }
+    }
+  }
+  pickups = pickups.filter(p => p.x > -50 && !p.collected);
+
+  // ===== Power-up drops =====
+  for (const d of powerupDrops) {
+    d.x -= speed;
+    d.bob += dt * 2.5;
+    d.spin += dt * 4;
+    if (!d.collected) {
+      const dx = d.x - plane.x;
+      const dy = d.y - plane.y;
+      if (Math.abs(dx) < 30 && Math.abs(dy) < 24) {
+        d.collected = true;
+        const p = powerups[d.type];
+        p.active = true;
+        if (d.type === 'shield') { p.t = 0; p.max = 0; }
+        else { p.t = p.max; }
+        audio.powerup();
+        const colorMap = { shield:'#7fdbda', magnet:'#b87cf5', x2:'#ffb951', slow:'#00ffaa' };
+        for (let i = 0; i < 26; i++) {
+          particles.push({
+            x: d.x, y: d.y,
+            vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5,
+            life: 1.2, size: 2+Math.random()*2.5,
+            type: 'spark', color: colorMap[d.type],
+          });
+        }
+        popScore('PWR', d.x, d.y, d.type === 'shield' ? 'cyan' : (d.type === 'magnet' ? 'violet' : ''));
+        updatePowerupUI();
+      }
+    }
+  }
+  powerupDrops = powerupDrops.filter(d => d.x > -50 && !d.collected);
+
+  // ===== Mountains =====
+  for (const m of mountains) {
+    m.x -= speed;
+    if (plane.invuln > 0) continue;
+    const inX = (plane.x + 22 > m.x) && (plane.x - 22 < m.x + m.width);
+    if (!inX) continue;
+    const localX = plane.x - m.x;
+    const t = Math.abs(localX - m.width/2) / (m.width/2);
+    if (m.fromTop) {
+      const yLine = m.height * (1 - Math.min(1, Math.max(0, t)));
+      if (plane.y - 10 < yLine) takeHit('peak');
+    } else {
+      const yLine = H - m.height * (1 - Math.min(1, Math.max(0, t)));
+      if (plane.y + 10 > yLine) takeHit('peak');
+    }
+  }
+  mountains = mountains.filter(m => m.x > -m.width - 20);
+
+  // ===== Hazards =====
+  updateHazards(stepDt);
+
+  // ===== Boss attacks =====
+  if (inBoss) updateBossAttacks(stepDt);
+
+  // ===== Particles =====
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.type === 'vapor') { p.size *= 1.025; p.life -= dt * 1.4; }
+    else if (p.type === 'spark') { p.vy += 0.08; p.vx *= 0.97; p.life -= dt * 1.0; }
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  // ===== Weather =====
+  updateWeather(stepDt);
+
+  // ===== HUD =====
+  document.getElementById('scoreVal').textContent = String(score).padStart(6, '0');
+  document.getElementById('altVal').textContent   = 'FL ' + Math.round((H - plane.y) * 0.3);
+  document.getElementById('distEl').textContent   = 'DIST ' + (totalDistance/100).toFixed(1) + ' KM';
+  document.getElementById('stageVal').textContent = `${levelIdx + 1} / ${LEVELS.length}`;
+  updateMissionTracker();
+}
+
+// ============================================================
+// HAZARDS UPDATE
+// ============================================================
+
+function updateHazards(dt) {
+  for (const h of hazards) {
+    if (h.type === 'icicle') {
+      h.x -= speed * 0.4;  // moves with world but slower
+      if (h.telegraphT > 0) {
+        h.telegraphT -= dt;
+      } else {
+        h.vy += 0.6;
+        h.y += h.vy;
+        // collision: tip at h.y + 28
+        if (plane.invuln === 0) {
+          const dx = h.x - plane.x;
+          if (Math.abs(dx) < 14 && Math.abs(h.y + 18 - plane.y) < 24) {
+            takeHit('icicle');
+            h.dead = true;
+          }
+        }
+        if (h.y > H + 60) h.dead = true;
+      }
+    }
+    else if (h.type === 'lightning') {
+      h.x -= speed * 0.7;
+      if (h.telegraphT > 0) {
+        h.telegraphT -= dt;
+        if (h.telegraphT <= 0) {
+          h.strikeT = 0.3;
+          h.flashAlpha = 1;
+          shake(10, 0.3);
+          audio.thunder();
+        }
+      } else if (h.strikeT > 0) {
+        h.strikeT -= dt;
+        h.flashAlpha = h.strikeT / 0.3;
+        // collision: vertical column
+        if (plane.invuln === 0 && Math.abs(h.x - plane.x) < 16) {
+          takeHit('lightning');
+        }
+      } else {
+        h.dead = true;
+      }
+    }
+    else if (h.type === 'drone') {
+      h.x -= h.speed + speed * 0.4;
+      h.yPhase += dt * 1.2;
+      const y = h.baseY + Math.sin(h.yPhase) * h.yAmp;
+      h.y = y;
+      if (plane.invuln === 0) {
+        const dx = h.x - plane.x;
+        const dy = y - plane.y;
+        if (Math.abs(dx) < 22 && Math.abs(dy) < 18) {
+          takeHit('drone');
+          h.dead = true;
+          for (let i = 0; i < 20; i++) {
+            particles.push({
+              x: h.x, y, vx:(Math.random()-0.5)*5, vy:(Math.random()-0.5)*5,
+              life:1, size:2+Math.random()*2, type:'spark', color:'#00ffaa',
+            });
+          }
+        }
+      }
+      if (h.x < -50) h.dead = true;
+    }
+    else if (h.type === 'meteor') {
+      h.x += h.vx;
+      h.y += h.vy;
+      h.trail.push({ x: h.x, y: h.y, life: 1 });
+      if (h.trail.length > 8) h.trail.shift();
+      for (const t of h.trail) t.life -= dt * 2;
+      if (plane.invuln === 0) {
+        const dx = h.x - plane.x;
+        const dy = h.y - plane.y;
+        if (Math.abs(dx) < h.size + 14 && Math.abs(dy) < h.size + 12) {
+          takeHit('meteor');
+          h.dead = true;
+        }
+      }
+      if (h.y > H + 30 || h.x < -50) h.dead = true;
+    }
+    else if (h.type === 'fireball') {
+      h.x += h.vx;
+      h.y += h.vy;
+      h.vy += 0.18;  // gravity
+      h.life -= dt;
+      // particle trail
+      if (Math.random() < 0.7) {
+        particles.push({
+          x: h.x, y: h.y,
+          vx: (Math.random()-0.5)*1, vy: 1+Math.random(),
+          life: 0.6, size: 3+Math.random()*2,
+          type: 'spark', color: Math.random() < 0.5 ? '#ff6a3a' : '#ffaa00',
+        });
+      }
+      if (plane.invuln === 0) {
+        const dx = h.x - plane.x;
+        const dy = h.y - plane.y;
+        if (Math.abs(dx) < h.size + 14 && Math.abs(dy) < h.size + 12) {
+          takeHit('fireball');
+          h.dead = true;
+        }
+      }
+      if (h.life <= 0 || h.y > H + 40) h.dead = true;
+    }
+    else if (h.type === 'ashCloud') {
+      h.x -= speed * 0.85;
+      if (plane.invuln === 0) {
+        const dx = h.x + h.w/2 - plane.x;
+        const dy = h.y - plane.y;
+        if (Math.abs(dx) < h.w/2 + 14 && Math.abs(dy) < h.h/2 + 12) {
+          takeHit('ash');
+        }
+      }
+      if (h.x < -h.w - 30) h.dead = true;
+    }
+    else if (h.type === 'asteroid') {
+      h.x += h.vx;
+      h.y += h.vy;
+      h.rot += h.rotSpeed;
+      // bounce softly off top/bottom
+      if (h.y < 30 || h.y > H - 30) h.vy *= -1;
+      if (plane.invuln === 0) {
+        const dx = h.x - plane.x;
+        const dy = h.y - plane.y;
+        if (Math.abs(dx) < h.size && Math.abs(dy) < h.size * 0.85) {
+          takeHit('asteroid');
+          // break apart
+          for (let i = 0; i < 22; i++) {
+            particles.push({
+              x: h.x, y: h.y,
+              vx: (Math.random()-0.5)*7, vy: (Math.random()-0.5)*7,
+              life: 1.2, size: 2+Math.random()*3, type: 'spark',
+              color: i % 2 ? '#8a6a4a' : '#3a2818',
+            });
+          }
+          h.dead = true;
+        }
+      }
+      if (h.x < -60) h.dead = true;
+    }
+    else if (h.type === 'waterspout') {
+      h.x -= speed * 0.55;
+      if (h.telegraphT > 0) {
+        h.telegraphT -= dt;
+        if (h.telegraphT <= 0) {
+          h.riseT = 2.4;
+          shake(7, 0.25);
+        }
+      } else if (h.riseT > 0) {
+        h.riseT -= dt;
+        // rise then fall
+        const elapsed = 2.4 - h.riseT;
+        const peak = 1.2;
+        h.height = elapsed < peak
+          ? (elapsed / peak) * H * 0.85
+          : (1 - (elapsed - peak) / (2.4 - peak)) * H * 0.85;
+        if (plane.invuln === 0 && Math.abs(h.x - plane.x) < 24 && plane.y > H - h.height) {
+          takeHit('waterspout');
+        }
+      } else {
+        h.dead = true;
+      }
+      if (h.x < -50) h.dead = true;
+    }
+  }
+  hazards = hazards.filter(h => !h.dead);
+}
+
+// ============================================================
+// WEATHER
+// ============================================================
+
+function updateWeather(dt) {
+  const wt = level.weather && level.weather.type;
+  if (!wt || wt === 'none') return;
+
+  // spawn rate per type
+  const baseRate = wt === 'rain' ? 6 : (wt === 'snow' ? 3 : (wt === 'ash' ? 2 : 0));
+  const rate = Math.max(1, Math.round(baseRate * weatherCapMul));
+  for (let i = 0; i < rate; i++) {
+    weatherParticles.push({
+      type: wt,
+      x: Math.random() * W,
+      y: -20,
+      vx: wt === 'rain' ? -3 - Math.random()*2 : (Math.random()-0.5),
+      vy: wt === 'rain' ? 12 : (wt === 'snow' ? 1.5 + Math.random() : 0.6 + Math.random()*0.5),
+      size: wt === 'snow' ? 2 + Math.random()*2 : (wt === 'ash' ? 1.5 + Math.random()*2 : 1),
+      life: 1,
+      drift: Math.random() * Math.PI * 2,
+    });
+  }
+  for (const p of weatherParticles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (wt === 'snow') p.x += Math.sin(p.drift + time * 2) * 0.5;
+    if (wt === 'ash') p.x += Math.sin(p.drift + time) * 0.8;
+    p.life -= dt * 0.3;
+  }
+  weatherParticles = weatherParticles.filter(p => p.y < H + 20 && p.life > 0);
+}
+
+// ============================================================
+// BOSS
+// ============================================================
+
+function enterBoss() {
+  inBoss = true;
+  bossT = 0;
+  bossHP = 1;
+  bossPhase = 1;
+  bossNextAttack = 0.8;
+  // alert flash
+  const flash = document.getElementById('alertFlash');
+  flash.classList.remove('on');
+  void flash.offsetWidth;
+  flash.classList.add('on');
+  // banner
+  const banner = document.getElementById('bossBanner');
+  banner.classList.add('visible');
+  document.getElementById('bossName').textContent = level.boss.name;
+  audio.bossEnter();
+  shake(8, 0.5);
+
+  // clear remaining non-boss spawns to make room
+  cloudRings = [];
+  pickups = [];
+  hazards = [];
+  powerupDrops = [];
+}
+
+function updateBoss(dt) {
+  bossT += dt;
+  bossHP = Math.max(0, 1 - bossT / level.boss.duration);
+
+  // Update banner
+  document.getElementById('bossBarFill').style.transform = `scaleX(${bossHP})`;
+  const phase = Math.min(4, 1 + Math.floor(bossT / (level.boss.duration / 4)));
+  if (phase !== bossPhase) {
+    bossPhase = phase;
+    document.getElementById('bossPhase').textContent = `Phase ${phase} / 4`;
+  }
+
+  // Spawn boss attacks at increasing rate
+  bossNextAttack -= dt;
+  if (bossNextAttack <= 0) {
+    spawnBossAttack();
+    const cooldown = Math.max(0.4, 1.4 - bossPhase * 0.2);
+    bossNextAttack = cooldown * (0.7 + Math.random() * 0.6);
+  }
+
+  // Boss defeated
+  if (bossHP <= 0) {
+    onBossDefeated();
+  }
+}
+
+function spawnBossAttack() {
+  const attacks = level.boss.attacks;
+  const a = attacks[Math.floor(Math.random() * attacks.length)];
+
+  if (a === 'rain') {
+    // Multiple raindrops in a wave
+    const n = 3 + bossPhase;
+    for (let i = 0; i < n; i++) {
+      bossAttacks.push({
+        type: 'raindrop',
+        x: W * (0.5 + Math.random() * 0.5),
+        y: -20 - i * 30,
+        vx: -3,
+        vy: 8,
+        size: 4,
+      });
+    }
+  }
+  else if (a === 'gust') {
+    bossAttacks.push({
+      type: 'gust',
+      y: H * 0.3 + Math.random() * H * 0.4,
+      h: 80 + Math.random() * 40,
+      x: W,
+      duration: 1.5,
+      t: 0,
+    });
+  }
+  else if (a === 'icicle') {
+    const n = 2 + Math.floor(bossPhase * 0.7);
+    for (let i = 0; i < n; i++) {
+      hazards.push({
+        type: 'icicle',
+        x: W * 0.4 + Math.random() * W * 0.55,
+        y: 0,
+        vy: 0,
+        telegraphT: 0.5,
+        fallT: 0,
+      });
+    }
+  }
+  else if (a === 'iceWall') {
+    bossAttacks.push({
+      type: 'iceWall',
+      x: W,
+      gapY: H * 0.25 + Math.random() * H * 0.5,
+      gap: 130,
+    });
+  }
+  else if (a === 'lightning') {
+    const n = 1 + Math.floor(bossPhase * 0.6);
+    for (let i = 0; i < n; i++) {
+      hazards.push({
+        type: 'lightning',
+        x: W * 0.3 + Math.random() * W * 0.65,
+        telegraphT: 0.6,
+        strikeT: 0,
+        flashAlpha: 0,
+      });
+    }
+  }
+  else if (a === 'droneSwarm') {
+    const n = 2 + bossPhase;
+    for (let i = 0; i < n; i++) {
+      hazards.push({
+        type: 'drone',
+        x: W + i * 50,
+        baseY: H * 0.25 + Math.random() * H * 0.5,
+        yPhase: Math.random() * Math.PI * 2,
+        yAmp: 50 + Math.random() * 40,
+        speed: 1 + Math.random() * 1.5,
+      });
+    }
+  }
+  else if (a === 'beam') {
+    bossAttacks.push({
+      type: 'beam',
+      x: W * 0.6 + Math.random() * W * 0.3,
+      telegraphT: 0.8,
+      activeT: 0,
+      flashAlpha: 0,
+    });
+  }
+  else if (a === 'fireball') {
+    const n = 2 + bossPhase;
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        if (!inBoss) return;
+        hazards.push({
+          type: 'fireball',
+          x: W * 0.5 + Math.random() * W * 0.4,
+          y: H + 20,
+          vx: -1.5 - Math.random() * 1.5,
+          vy: -7 - Math.random() * 3,
+          size: 12 + Math.random() * 5,
+          life: 4,
+        });
+      }, i * 180);
+    }
+  }
+  else if (a === 'lavaWall') {
+    bossAttacks.push({
+      type: 'lavaWall',
+      x: W,
+      gapY: H * 0.25 + Math.random() * H * 0.5,
+      gap: 130,
+    });
+  }
+  else if (a === 'asteroid') {
+    const n = 1 + Math.floor(bossPhase * 0.7);
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        if (!inBoss) return;
+        hazards.push({
+          type: 'asteroid',
+          x: W + 60,
+          y: H * 0.18 + Math.random() * H * 0.64,
+          vx: -3 - Math.random() * 2,
+          vy: (Math.random() - 0.5) * 1.2,
+          size: 22 + Math.random() * 12,
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.06,
+        });
+      }, i * 220);
+    }
+  }
+  else if (a === 'waterspout') {
+    const n = 1 + Math.floor(bossPhase * 0.6);
+    for (let i = 0; i < n; i++) {
+      hazards.push({
+        type: 'waterspout',
+        x: W * 0.4 + Math.random() * W * 0.55,
+        telegraphT: 0.7,
+        riseT: 0,
+        height: 0,
+      });
+    }
+  }
+}
+
+function updateBossAttacks(dt) {
+  for (const a of bossAttacks) {
+    if (a.type === 'raindrop') {
+      a.x += a.vx;
+      a.y += a.vy;
+      a.vy += 0.2;
+      if (plane.invuln === 0 && Math.abs(a.x - plane.x) < 12 && Math.abs(a.y - plane.y) < 14) {
+        takeHit('raindrop');
+        a.dead = true;
+      }
+      if (a.y > H + 20 || a.x < -20) a.dead = true;
+    }
+    else if (a.type === 'gust') {
+      a.t += dt;
+      a.x -= 6;
+      // push plane
+      if (Math.abs(plane.y - a.y) < a.h/2) {
+        plane.vy += 0.4;
+        plane.x = Math.max(W * 0.18, plane.x - 0.3);
+      }
+      if (a.t >= a.duration || a.x < -100) a.dead = true;
+    }
+    else if (a.type === 'iceWall' || a.type === 'lavaWall') {
+      a.x -= speed * 1.1;
+      if (plane.invuln === 0) {
+        const inX = Math.abs(a.x - plane.x) < 18;
+        if (inX && (plane.y < a.gapY - a.gap/2 || plane.y > a.gapY + a.gap/2)) {
+          takeHit(a.type);
+        }
+      }
+      if (a.x < -50) a.dead = true;
+    }
+    else if (a.type === 'beam') {
+      if (a.telegraphT > 0) {
+        a.telegraphT -= dt;
+        if (a.telegraphT <= 0) {
+          a.activeT = 0.5;
+          a.flashAlpha = 1;
+          shake(8, 0.3);
+        }
+      } else if (a.activeT > 0) {
+        a.activeT -= dt;
+        a.flashAlpha = a.activeT / 0.5;
+        if (plane.invuln === 0 && Math.abs(a.x - plane.x) < 22) {
+          takeHit('beam');
+        }
+      } else {
+        a.dead = true;
+      }
+    }
+  }
+  bossAttacks = bossAttacks.filter(a => !a.dead);
+}
+
+function onBossDefeated() {
+  inBoss = false;
+  document.getElementById('bossBanner').classList.remove('visible');
+  // big explosion
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: W * 0.7 + (Math.random()-0.5) * 200,
+      y: H * 0.4 + (Math.random()-0.5) * 200,
+      vx: (Math.random()-0.5) * 10, vy: (Math.random()-0.5) * 10,
+      life: 1.5, size: 3 + Math.random()*4,
+      type: 'spark',
+      color: ['#ffb951','#e63946','#7fdbda'][Math.floor(Math.random()*3)],
+    });
+  }
+  shake(16, 0.6);
+  audio.bossDefeat();
+  // bonus score
+  const bonus = 500 + 250 * (levelIdx + 1);
+  score += bonus; stageScore += bonus;
+  popScore('+' + bonus + ' boss', plane.x, plane.y - 40, '');
+
+  // Heal +2 fuselage on boss defeat (capped at MAX_LIVES)
+  const before = lives;
+  lives = Math.min(MAX_LIVES, lives + 2);
+  const gained = lives - before;
+  if (gained > 0) {
+    updateLivesUI();
+    popScore('+' + gained + ' fuselage', plane.x, plane.y - 8, 'cyan');
+  }
+
+  // Clear all hazards/attacks
+  hazards = [];
+  bossAttacks = [];
+
+  setTimeout(goToLevelComplete, 1100);
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+
+function render() {
+  // Compute shake offset
+  let sx = 0, sy = 0;
+  if (shakeT > 0 && shakeMag > 0) {
+    const k = (shakeT / 0.5);
+    sx = (Math.random()-0.5) * shakeMag * k;
+    sy = (Math.random()-0.5) * shakeMag * k;
+  }
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  drawSky();
+  drawDistantMountains();
+  drawDangerZones();
+
+  for (const m of mountains)   drawMountain(m);
+
+  // weather behind closer entities
+  drawWeather();
+
+  for (const r of cloudRings)  drawCloudRing(r);
+
+  // Hazards
+  for (const h of hazards)     drawHazard(h);
+
+  // Boss attacks
+  for (const a of bossAttacks) drawBossAttack(a);
+
+  // Pickups
+  for (const p of pickups)     drawPassenger(p);
+  for (const d of powerupDrops) drawPowerupDrop(d);
+
+  drawParticles();
+
+  if (state === STATE.PLAYING || state === STATE.LEVEL_COMPLETE || state === STATE.PAUSED) {
+    const flicker = plane.invuln > 0 && Math.floor(plane.invuln / 4) % 2 === 0;
+    if (!flicker) drawPlane();
+  }
+
+  // Vignette
+  const v = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.4, W/2, H/2, Math.max(W,H)*0.72);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, `rgba(0,0,0,${level && level.palette.vignette || 0.4})`);
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.restore();
+}
+
+function drawSky() {
+  if (!level) return;
+  const p = level.palette;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0,    p.skyTop);
+  g.addColorStop(0.42, p.skyMid);
+  g.addColorStop(1,    p.skyLow);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // Sun (if any)
+  if (p.sun) {
+    const sx = p.sun.x * W, sy = p.sun.y * H, sr = Math.min(p.sun.r, W * 0.07);
+    const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr * 3);
+    sg.addColorStop(0,   p.sun.color);
+    sg.addColorStop(0.3, p.sun.color.replace(/[\d.]+\)$/, '0.4)'));
+    sg.addColorStop(1,   p.sun.color.replace(/[\d.]+\)$/, '0)'));
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(sx, sy, sr * 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = p.sun.color;
+    ctx.beginPath(); ctx.arc(sx, sy, sr * 0.7, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Aurora ribbons
+  if (p.aurora) {
+    for (const r of auroraRibbons) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = `rgba(${r.hue}, 0.18)`;
+      ctx.beginPath();
+      const segs = 80;
+      for (let i = 0; i <= segs; i++) {
+        const x = (i / segs) * W;
+        const y = r.y + Math.sin(x * r.freq + r.phase) * r.amp;
+        if (i === 0) ctx.moveTo(x, y - 30);
+        else ctx.lineTo(x, y - 30);
+      }
+      for (let i = segs; i >= 0; i--) {
+        const x = (i / segs) * W;
+        const y = r.y + Math.sin(x * r.freq + r.phase) * r.amp;
+        ctx.lineTo(x, y + 30);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Stars
+  for (const s of stars) {
+    const a = (Math.sin(s.tw)*0.5 + 0.5) * 0.6;
+    ctx.fillStyle = `rgba(${p.starColor},${a})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // BG clouds
+  const cloudAlpha = level.id === 5 ? 0.18 : (level.id === 4 ? 0.12 : 0.22);
+  const cloudColor = level.id === 5 ? '180, 100, 80' : (level.id === 4 ? '180, 200, 230' : '255, 240, 230');
+  for (const c of bgClouds) drawSoftCloud(c.x, c.y, c.scale, cloudAlpha, cloudColor);
+}
+
+function drawSoftCloud(x, y, scale, alpha, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = `rgba(${color || '255,240,230'}, ${alpha})`;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 60, 22, 0, 0, Math.PI * 2);
+  ctx.ellipse(-25, -10, 28, 18, 0, 0, Math.PI * 2);
+  ctx.ellipse(25, -8, 32, 22, 0, 0, Math.PI * 2);
+  ctx.ellipse(-50, 5, 24, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(45, 6, 26, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ===== Danger zones — invisible damage bands at top and bottom =====
+// Renders a subtle warning gradient + animated chevron markers tinted in
+// the level's accent color so the warning fits each biome.
+function drawDangerZones() {
+  if (!level) return;
+  const band = H * 0.08;
+  const accent = (level.boss && level.boss.accent) || '#ff3a5c';
+  const accentRGB = hexToRgb(accent);
+  const pulse = (Math.sin(time * 3) * 0.5 + 0.5);
+  const baseAlpha = 0.10 + pulse * 0.10;
+
+  // Top band — gradient fade
+  const gTop = ctx.createLinearGradient(0, 0, 0, band);
+  gTop.addColorStop(0, `rgba(${accentRGB},${baseAlpha + 0.12})`);
+  gTop.addColorStop(1, `rgba(${accentRGB},0)`);
+  ctx.fillStyle = gTop;
+  ctx.fillRect(0, 0, W, band);
+
+  // Bottom band — gradient fade
+  const gBot = ctx.createLinearGradient(0, H - band, 0, H);
+  gBot.addColorStop(0, `rgba(${accentRGB},0)`);
+  gBot.addColorStop(1, `rgba(${accentRGB},${baseAlpha + 0.12})`);
+  ctx.fillStyle = gBot;
+  ctx.fillRect(0, H - band, W, band);
+
+  // Chevron warning markers — animated, drift right-to-left
+  const chevronCount = Math.ceil(W / 90) + 2;
+  const drift = (time * 30) % 90;
+  ctx.fillStyle = `rgba(${accentRGB},${0.35 + pulse * 0.25})`;
+  for (let i = 0; i < chevronCount; i++) {
+    const cx = W - i * 90 + drift;
+    // top chevrons (point down toward danger)
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, 4);
+    ctx.lineTo(cx + 7, 4);
+    ctx.lineTo(cx, 12);
+    ctx.closePath();
+    ctx.fill();
+    // bottom chevrons (point up toward danger)
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, H - 4);
+    ctx.lineTo(cx + 7, H - 4);
+    ctx.lineTo(cx, H - 12);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// Tiny helper — convert "#rrggbb" to "r,g,b" for rgba() use
+function hexToRgb(hex) {
+  if (!hex || hex[0] !== '#') return '255,58,92';
+  const v = hex.slice(1);
+  const r = parseInt(v.slice(0,2), 16);
+  const g = parseInt(v.slice(2,4), 16);
+  const b = parseInt(v.slice(4,6), 16);
+  return `${r},${g},${b}`;
+}
+
+function drawDistantMountains() {
+  if (!level) return;
+  const p = level.palette;
+  const baseOff = totalDistance * 0.2;
+
+  // Far range
+  ctx.fillStyle = p.mountainFar;
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  const stepF = 80;
+  for (let i = -1; i <= W/stepF + 2; i++) {
+    const px = i * stepF - (baseOff * 0.1) % stepF;
+    const ph = 60 + Math.sin(i*1.3) * 30 + Math.cos(i*0.7) * 22;
+    ctx.lineTo(px + stepF/2, H * 0.58 - ph);
+    ctx.lineTo(px + stepF, H * 0.58);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mid range
+  ctx.fillStyle = p.mountainMid;
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  const stepM = 110;
+  for (let i = -1; i <= W/stepM + 2; i++) {
+    const px = i * stepM - (baseOff * 0.28) % stepM;
+    const ph = 100 + Math.sin(i*0.9 + 1.7) * 55;
+    ctx.lineTo(px + stepM/2, H * 0.72 - ph);
+    ctx.lineTo(px + stepM, H * 0.72);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Snow caps on mid
+  ctx.fillStyle = p.snowCap;
+  ctx.globalAlpha = 0.5;
+  for (let i = -1; i <= W/stepM + 2; i++) {
+    const px = i * stepM - (baseOff * 0.28) % stepM;
+    const ph = 100 + Math.sin(i*0.9 + 1.7) * 55;
+    const peakX = px + stepM/2;
+    const peakY = H * 0.72 - ph;
+    ctx.beginPath();
+    ctx.moveTo(peakX - 22, peakY + ph * 0.32);
+    ctx.lineTo(peakX, peakY);
+    ctx.lineTo(peakX + 22, peakY + ph * 0.32);
+    ctx.lineTo(peakX + 8, peakY + ph * 0.18);
+    ctx.lineTo(peakX, peakY + ph * 0.28);
+    ctx.lineTo(peakX - 8, peakY + ph * 0.16);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMountain(m) {
+  const p = level.palette;
+  if (m.fromTop) {
+    const g = ctx.createLinearGradient(0, 0, 0, m.height);
+    g.addColorStop(0, p.mountainNear[1]);
+    g.addColorStop(1, p.mountainNear[0]);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(m.x, 0);
+    ctx.lineTo(m.x + m.width, 0);
+    ctx.lineTo(m.x + m.width/2, m.height);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(m.x, 0);
+    ctx.lineTo(m.x + m.width/2, m.height);
+    ctx.lineTo(m.x + m.width, 0);
+    ctx.stroke();
+  } else {
+    const g = ctx.createLinearGradient(0, H - m.height, 0, H);
+    g.addColorStop(0,   p.mountainNear[0]);
+    g.addColorStop(0.6, p.mountainNear[1]);
+    g.addColorStop(1,   p.mountainNear[2]);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(m.x, H);
+    ctx.lineTo(m.x + m.width/2, H - m.height);
+    ctx.lineTo(m.x + m.width, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // Snow / lava cap
+    const capH = Math.min(m.height * 0.38, 65);
+    const peakX = m.x + m.width/2;
+    const peakY = H - m.height;
+    const capW = capH * (m.width / m.height);
+    ctx.fillStyle = p.snowCap;
+    if (level.id === 5) {
+      // glow
+      const gg = ctx.createRadialGradient(peakX, peakY + capH * 0.3, 0, peakX, peakY + capH * 0.3, capH * 1.5);
+      gg.addColorStop(0, 'rgba(255,100,40,0.5)');
+      gg.addColorStop(1, 'rgba(255,100,40,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(peakX, peakY + capH * 0.4, capH * 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = p.snowCap;
+    }
+    ctx.beginPath();
+    ctx.moveTo(peakX, peakY);
+    ctx.lineTo(peakX - 9, peakY + capH * 0.42);
+    ctx.lineTo(peakX - capW/2, peakY + capH);
+    ctx.lineTo(peakX - 5, peakY + capH * 0.78);
+    ctx.lineTo(peakX + 6, peakY + capH * 0.86);
+    ctx.lineTo(peakX + capW/2, peakY + capH);
+    ctx.lineTo(peakX + 9, peakY + capH * 0.4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(m.x, H);
+    ctx.lineTo(peakX, peakY);
+    ctx.stroke();
+  }
+}
+
+function drawWeather() {
+  const wt = level.weather && level.weather.type;
+  if (!wt || wt === 'none') return;
+
+  for (const p of weatherParticles) {
+    if (p.type === 'rain') {
+      ctx.strokeStyle = `rgba(180, 200, 230, ${p.life * 0.5})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + p.vx * 0.6, p.y + p.vy * 0.6);
+      ctx.stroke();
+    } else if (p.type === 'snow') {
+      ctx.fillStyle = `rgba(255, 255, 255, ${p.life * 0.7})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.type === 'ash') {
+      ctx.fillStyle = `rgba(80, 60, 50, ${p.life * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawCloudRing(r) {
+  const bob = Math.sin(r.bobPhase) * 4;
+  const cy = r.y + bob;
+  const top = cy - r.gap/2;
+  const bot = cy + r.gap/2;
+  const fill = r.passed ? 'rgba(127, 219, 218, 0.92)' : 'rgba(255, 250, 245, 0.95)';
+
+  ctx.save();
+  ctx.translate(r.x, top - 26);
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 38, 22, 0, 0, Math.PI * 2);
+  ctx.ellipse(-25, 6, 22, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(25, 6, 24, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(r.x, bot + 26);
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 38, 22, 0, 0, Math.PI * 2);
+  ctx.ellipse(-25, -6, 22, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(25, -6, 24, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  if (!r.passed) {
+    ctx.strokeStyle = 'rgba(127, 219, 218, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(r.x, top);
+    ctx.lineTo(r.x, bot);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawPassenger(p) {
+  if (p.collected) return;
+  const y = p.y + Math.sin(p.bob) * 8;
+  const pulseR = 18 + Math.sin(p.pulse) * 4;
+
+  const g = ctx.createRadialGradient(p.x, y, 0, p.x, y, pulseR * 2);
+  g.addColorStop(0, 'rgba(255, 185, 81, 0.55)');
+  g.addColorStop(1, 'rgba(255, 185, 81, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(p.x, y, pulseR * 2, 0, Math.PI * 2); ctx.fill();
+
+  ctx.save();
+  ctx.translate(p.x, y);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = '#ffb951';
+  ctx.fillRect(-7, -7, 14, 14);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(-7, -7, 14, 14);
+  ctx.restore();
+}
+
+function drawPowerupDrop(d) {
+  const y = d.y + Math.sin(d.bob) * 6;
+  const colorMap = {
+    shield: ['#7fdbda', 'rgba(127,219,218,'],
+    magnet: ['#b87cf5', 'rgba(184,124,245,'],
+    x2:     ['#ffb951', 'rgba(255,185,81,'],
+    slow:   ['#00ffaa', 'rgba(0,255,170,'],
+  };
+  const [solid, glow] = colorMap[d.type];
+
+  const g = ctx.createRadialGradient(d.x, y, 0, d.x, y, 28);
+  g.addColorStop(0, glow + '0.5)');
+  g.addColorStop(1, glow + '0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(d.x, y, 28, 0, Math.PI * 2); ctx.fill();
+
+  ctx.save();
+  ctx.translate(d.x, y);
+  ctx.rotate(d.spin * 0.5);
+  // hexagon
+  ctx.strokeStyle = solid;
+  ctx.lineWidth = 2;
+  ctx.fillStyle = 'rgba(10, 14, 26, 0.7)';
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3;
+    const x = Math.cos(a) * 12;
+    const yy = Math.sin(a) * 12;
+    if (i === 0) ctx.moveTo(x, yy);
+    else ctx.lineTo(x, yy);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  // icon glyph
+  ctx.fillStyle = solid;
+  ctx.font = 'bold 11px Chakra Petch, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const glyph = { shield: 'S', magnet: 'M', x2: '×2', slow: 'T' }[d.type];
+  ctx.fillText(glyph, d.x, y);
+}
+
+function drawHazard(h) {
+  if (h.type === 'icicle') {
+    if (h.telegraphT > 0) {
+      // telegraph (pulsing marker at top)
+      const a = (Math.sin(time * 16) * 0.5 + 0.5) * 0.7;
+      ctx.fillStyle = `rgba(220, 240, 255, ${a})`;
+      ctx.beginPath();
+      ctx.moveTo(h.x - 10, 0);
+      ctx.lineTo(h.x + 10, 0);
+      ctx.lineTo(h.x, 18);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // falling icicle
+      const g = ctx.createLinearGradient(h.x, h.y, h.x, h.y + 28);
+      g.addColorStop(0, '#d8f0ff');
+      g.addColorStop(1, '#7eb8d4');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(h.x - 7, h.y);
+      ctx.lineTo(h.x + 7, h.y);
+      ctx.lineTo(h.x, h.y + 28);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(h.x - 4, h.y + 4);
+      ctx.lineTo(h.x, h.y + 22);
+      ctx.stroke();
+    }
+  }
+  else if (h.type === 'lightning') {
+    if (h.telegraphT > 0) {
+      const a = (Math.sin(time * 24) * 0.5 + 0.5) * 0.8;
+      ctx.strokeStyle = `rgba(184, 124, 245, ${a})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 8]);
+      ctx.beginPath();
+      ctx.moveTo(h.x, 0);
+      ctx.lineTo(h.x, H);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (h.strikeT > 0) {
+      // bright bolt
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = `rgba(255, 255, 255, ${h.flashAlpha})`;
+      ctx.lineWidth = 4 * h.flashAlpha;
+      ctx.beginPath();
+      let yy = 0;
+      let xx = h.x;
+      ctx.moveTo(xx, yy);
+      while (yy < H) {
+        yy += 18 + Math.random() * 20;
+        xx = h.x + (Math.random() - 0.5) * 16;
+        ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+      // outer glow
+      ctx.strokeStyle = `rgba(184, 124, 245, ${h.flashAlpha * 0.6})`;
+      ctx.lineWidth = 12 * h.flashAlpha;
+      ctx.stroke();
+      ctx.restore();
+
+      // full-screen flash
+      ctx.fillStyle = `rgba(220, 200, 255, ${h.flashAlpha * 0.18})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+  else if (h.type === 'drone') {
+    // Cyberpunk drone — neon outline
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    ctx.fillStyle = '#0a1428';
+    ctx.strokeStyle = '#00ffaa';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-14, 0);
+    ctx.lineTo(-6, -8);
+    ctx.lineTo(10, -6);
+    ctx.lineTo(14, 0);
+    ctx.lineTo(10, 6);
+    ctx.lineTo(-6, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // eye
+    ctx.fillStyle = '#ff3a5c';
+    ctx.beginPath();
+    ctx.arc(8, 0, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // glow
+    ctx.shadowColor = '#00ffaa';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = 'rgba(0,255,170,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(-14, 0); ctx.lineTo(14, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+  else if (h.type === 'meteor') {
+    // trail
+    for (let i = 0; i < h.trail.length; i++) {
+      const t = h.trail[i];
+      ctx.fillStyle = `rgba(255, 180, 100, ${t.life * 0.5 * (i / h.trail.length)})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, h.size * (i / h.trail.length), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // body
+    const g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.size * 1.5);
+    g.addColorStop(0, '#ffd9a8');
+    g.addColorStop(0.5, '#ff7a3a');
+    g.addColorStop(1, 'rgba(120, 40, 20, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  else if (h.type === 'fireball') {
+    const g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.size * 1.6);
+    g.addColorStop(0, '#fff8d8');
+    g.addColorStop(0.4, '#ffaa00');
+    g.addColorStop(1, 'rgba(255, 80, 30, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.size * 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(h.x, h.y, h.size * 0.4, 0, Math.PI * 2); ctx.fill();
+  }
+  else if (h.type === 'ashCloud') {
+    ctx.fillStyle = 'rgba(40, 25, 20, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(h.x + h.w/2, h.y, h.w/2, h.h/2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // some embers
+    ctx.fillStyle = 'rgba(255, 140, 60, 0.6)';
+    for (let i = 0; i < 4; i++) {
+      const ex = h.x + Math.random() * h.w;
+      const ey = h.y + (Math.random() - 0.5) * h.h;
+      ctx.beginPath();
+      ctx.arc(ex, ey, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  else if (h.type === 'asteroid') {
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    ctx.rotate(h.rot);
+    // body — irregular polygon
+    const pts = 9;
+    ctx.fillStyle = '#5a4838';
+    ctx.beginPath();
+    for (let i = 0; i < pts; i++) {
+      const a = (i / pts) * Math.PI * 2;
+      const r = h.size * (0.72 + Math.sin(i * 2.3) * 0.28);
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // shading gradient
+    const ag = ctx.createRadialGradient(-h.size * 0.3, -h.size * 0.3, 0, 0, 0, h.size);
+    ag.addColorStop(0, 'rgba(255, 230, 200, 0.32)');
+    ag.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+    ctx.fillStyle = ag;
+    ctx.beginPath();
+    for (let i = 0; i < pts; i++) {
+      const a = (i / pts) * Math.PI * 2;
+      const r = h.size * (0.72 + Math.sin(i * 2.3) * 0.28);
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // craters
+    ctx.fillStyle = 'rgba(20, 14, 8, 0.7)';
+    ctx.beginPath();
+    ctx.arc(-h.size * 0.3, -h.size * 0.2, h.size * 0.18, 0, Math.PI * 2);
+    ctx.arc(h.size * 0.28, h.size * 0.18, h.size * 0.13, 0, Math.PI * 2);
+    ctx.arc(h.size * 0.05, -h.size * 0.35, h.size * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  else if (h.type === 'waterspout') {
+    if (h.telegraphT > 0) {
+      const a = (Math.sin(time * 14) * 0.5 + 0.5) * 0.7;
+      ctx.fillStyle = `rgba(127, 219, 218, ${a})`;
+      for (let i = 0; i < 5; i++) {
+        const bx = h.x + (Math.random() - 0.5) * 26;
+        const by = H - 4 - Math.random() * 14;
+        ctx.beginPath();
+        ctx.arc(bx, by, 2 + Math.random() * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = `rgba(127, 219, 218, ${a})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath();
+      ctx.moveTo(h.x, H);
+      ctx.lineTo(h.x, H - 90);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (h.riseT > 0 && h.height > 4) {
+      const top = H - h.height;
+      const g = ctx.createLinearGradient(h.x - 26, 0, h.x + 26, 0);
+      g.addColorStop(0, 'rgba(180, 220, 240, 0.45)');
+      g.addColorStop(0.5, 'rgba(220, 240, 250, 0.85)');
+      g.addColorStop(1, 'rgba(180, 220, 240, 0.45)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      const segs = 18;
+      for (let i = 0; i <= segs; i++) {
+        const yy = top + (h.height * i / segs);
+        const wave = Math.sin(yy * 0.05 + time * 6) * 6;
+        const xx = h.x - 18 + wave;
+        if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
+      for (let i = segs; i >= 0; i--) {
+        const yy = top + (h.height * i / segs);
+        const wave = Math.sin(yy * 0.05 + time * 6 + Math.PI) * 6;
+        const xx = h.x + 18 + wave;
+        ctx.lineTo(xx, yy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // spray
+      if (Math.random() < 0.55) {
+        particles.push({
+          x: h.x + (Math.random() - 0.5) * 32,
+          y: top + Math.random() * 30,
+          vx: (Math.random() - 0.5) * 2.5,
+          vy: -1.2 - Math.random() * 1.2,
+          life: 0.8, size: 1.5 + Math.random() * 1.5,
+          type: 'spark', color: '#a8d8e8',
+        });
+      }
+    }
+  }
+}
+
+function drawBossAttack(a) {
+  if (a.type === 'raindrop') {
+    ctx.fillStyle = 'rgba(140, 180, 220, 0.9)';
+    ctx.beginPath();
+    ctx.ellipse(a.x, a.y, 4, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200, 220, 240, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y - 8);
+    ctx.lineTo(a.x + a.vx * 2, a.y - 16);
+    ctx.stroke();
+  }
+  else if (a.type === 'gust') {
+    // wind streaks
+    const top = a.y - a.h/2;
+    ctx.strokeStyle = 'rgba(180, 200, 230, 0.4)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 12; i++) {
+      const yy = top + (a.h * i / 12);
+      const off = (time * 200 + i * 40) % W;
+      ctx.beginPath();
+      ctx.moveTo(W - off, yy);
+      ctx.lineTo(W - off + 60, yy);
+      ctx.stroke();
+    }
+  }
+  else if (a.type === 'iceWall' || a.type === 'lavaWall') {
+    const isLava = a.type === 'lavaWall';
+    const top = 0, bot = H;
+    const gapTop = a.gapY - a.gap/2;
+    const gapBot = a.gapY + a.gap/2;
+
+    const g = ctx.createLinearGradient(a.x - 20, 0, a.x + 20, 0);
+    if (isLava) {
+      g.addColorStop(0, '#3a0a08');
+      g.addColorStop(0.5, '#ff6a3a');
+      g.addColorStop(1, '#3a0a08');
+    } else {
+      g.addColorStop(0, '#a8d4e8');
+      g.addColorStop(0.5, '#e0f5ff');
+      g.addColorStop(1, '#a8d4e8');
+    }
+    ctx.fillStyle = g;
+
+    // top piece
+    ctx.fillRect(a.x - 18, top, 36, gapTop);
+    // bottom piece
+    ctx.fillRect(a.x - 18, gapBot, 36, bot - gapBot);
+
+    // glow on edges
+    if (isLava) {
+      ctx.fillStyle = 'rgba(255, 170, 0, 0.5)';
+      ctx.fillRect(a.x - 22, gapTop - 4, 44, 4);
+      ctx.fillRect(a.x - 22, gapBot, 44, 4);
+    } else {
+      ctx.fillStyle = 'rgba(220, 240, 255, 0.5)';
+      ctx.fillRect(a.x - 22, gapTop - 4, 44, 4);
+      ctx.fillRect(a.x - 22, gapBot, 44, 4);
+    }
+  }
+  else if (a.type === 'beam') {
+    if (a.telegraphT > 0) {
+      const al = (Math.sin(time * 30) * 0.5 + 0.5) * 0.8;
+      ctx.strokeStyle = `rgba(0, 255, 170, ${al})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 6]);
+      ctx.beginPath();
+      ctx.moveTo(a.x, 0);
+      ctx.lineTo(a.x, H);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (a.activeT > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = `rgba(0, 255, 170, ${a.flashAlpha * 0.5})`;
+      ctx.fillRect(a.x - 24, 0, 48, H);
+      ctx.fillStyle = `rgba(255, 255, 255, ${a.flashAlpha})`;
+      ctx.fillRect(a.x - 6, 0, 12, H);
+      ctx.restore();
+    }
+  }
+}
+
+function drawPlane() {
+  ctx.save();
+  ctx.translate(plane.x, plane.y);
+  ctx.rotate(plane.tilt);
+
+  // ===== Shield aura =====
+  if (powerups.shield.active) {
+    const r = 38 + Math.sin(time * 8) * 2;
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, 'rgba(127, 219, 218, 0)');
+    g.addColorStop(0.7, 'rgba(127, 219, 218, 0.18)');
+    g.addColorStop(1, 'rgba(127, 219, 218, 0.45)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(127, 219, 218, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // ===== Soft ground shadow =====
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(0, 22, 38, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ===== HORIZONTAL STABILIZER (drawn first, behind tail fin) =====
+  ctx.fillStyle = '#e8eaed';
+  ctx.beginPath();
+  ctx.moveTo(-25, -2.2);
+  ctx.lineTo(-32, -3.4);
+  ctx.lineTo(-32, 1.2);
+  ctx.lineTo(-25, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+
+  // ===== VERTICAL STABILIZER (red with Swiss cross) =====
+  // Sweep: leading edge from base to top, swept back
+  ctx.fillStyle = '#e63946';
+  ctx.beginPath();
+  ctx.moveTo(-15, -4);     // base front
+  ctx.lineTo(-26, -22);    // top front
+  ctx.lineTo(-29, -22);    // top back
+  ctx.lineTo(-21, -4);     // base back
+  ctx.closePath();
+  ctx.fill();
+  // subtle gradient for depth
+  const finGrad = ctx.createLinearGradient(-15, -4, -29, -22);
+  finGrad.addColorStop(0, 'rgba(255,255,255,0.18)');
+  finGrad.addColorStop(1, 'rgba(0,0,0,0.18)');
+  ctx.fillStyle = finGrad;
+  ctx.beginPath();
+  ctx.moveTo(-15, -4);
+  ctx.lineTo(-26, -22);
+  ctx.lineTo(-29, -22);
+  ctx.lineTo(-21, -4);
+  ctx.closePath();
+  ctx.fill();
+  // Swiss cross detail
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(-23.7, -16, 1.5, 5.5);
+  ctx.fillRect(-25.4, -14, 4.7, 1.6);
+  // outline
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-15, -4); ctx.lineTo(-26, -22); ctx.lineTo(-29, -22); ctx.lineTo(-21, -4); ctx.closePath();
+  ctx.stroke();
+
+  // ===== WING (swept back, drawn before body so root tucks under) =====
+  ctx.fillStyle = '#d6dadd';
+  ctx.beginPath();
+  ctx.moveTo(2, 1);
+  ctx.lineTo(-5, 14);
+  ctx.lineTo(-17, 14);
+  ctx.lineTo(-12, 1);
+  ctx.closePath();
+  ctx.fill();
+  // wing shading
+  const wingGrad = ctx.createLinearGradient(0, 1, 0, 14);
+  wingGrad.addColorStop(0, 'rgba(255,255,255,0.25)');
+  wingGrad.addColorStop(1, 'rgba(0,0,0,0.22)');
+  ctx.fillStyle = wingGrad;
+  ctx.beginPath();
+  ctx.moveTo(2, 1);
+  ctx.lineTo(-5, 14);
+  ctx.lineTo(-17, 14);
+  ctx.lineTo(-12, 1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+
+  // ===== ENGINE POD (pylon + nacelle) =====
+  // Pylon
+  ctx.fillStyle = '#b8bcc0';
+  ctx.fillRect(0.5, 5, 5, 5.5);
+  // Pod nacelle
+  ctx.fillStyle = '#e8ebee';
+  ctx.beginPath();
+  ctx.ellipse(3, 11.5, 7, 3.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Nacelle shading
+  const podGrad = ctx.createLinearGradient(0, 8, 0, 15);
+  podGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
+  podGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+  ctx.fillStyle = podGrad;
+  ctx.beginPath();
+  ctx.ellipse(3, 11.5, 7, 3.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Front intake (dark — fan visible)
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.ellipse(8.5, 11.5, 1.6, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // intake highlight rim
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.ellipse(8.5, 11.5, 1.6, 3, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Rear nozzle
+  ctx.fillStyle = '#2a2a2a';
+  ctx.beginPath();
+  ctx.ellipse(-3, 11.5, 1.2, 2.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Pod outline
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.ellipse(3, 11.5, 7, 3.6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // ===== FUSELAGE — long aerodynamic tube =====
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(-30, 0);
+  ctx.bezierCurveTo(-26, -5, -10, -5.2, 18, -4.4);
+  ctx.lineTo(30, -2.2);
+  ctx.quadraticCurveTo(34, 0, 30, 2.2);
+  ctx.lineTo(18, 4.4);
+  ctx.bezierCurveTo(-10, 5.2, -26, 5, -30, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Top highlight band
+  const topGrad = ctx.createLinearGradient(0, -5, 0, 0);
+  topGrad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+  topGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = topGrad;
+  ctx.beginPath();
+  ctx.moveTo(-26, -3);
+  ctx.bezierCurveTo(-15, -4.6, 5, -4.8, 22, -3.6);
+  ctx.bezierCurveTo(5, -2.6, -15, -2.5, -26, -2.2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bottom shading
+  const botGrad = ctx.createLinearGradient(0, 0, 0, 5);
+  botGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  botGrad.addColorStop(1, 'rgba(0, 0, 0, 0.16)');
+  ctx.fillStyle = botGrad;
+  ctx.beginPath();
+  ctx.moveTo(-26, 2.5);
+  ctx.bezierCurveTo(-15, 4.6, 5, 4.8, 22, 3.6);
+  ctx.bezierCurveTo(5, 2.6, -15, 2.5, -26, 2.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // ===== Red cheatline along belly =====
+  ctx.strokeStyle = '#e63946';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(-25, 3.6);
+  ctx.bezierCurveTo(-10, 4.4, 8, 4.2, 24, 3);
+  ctx.stroke();
+
+  // ===== COCKPIT WINDOWS (4 angled panes at nose) =====
+  ctx.fillStyle = '#1a2535';
+  ctx.beginPath();
+  ctx.moveTo(20, -3.7);
+  ctx.lineTo(29.5, -2.4);
+  ctx.lineTo(29.5, -1.2);
+  ctx.lineTo(20, -2.2);
+  ctx.closePath();
+  ctx.fill();
+  // window mullions (white separators)
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 0.55;
+  for (let i = 1; i < 4; i++) {
+    const wx = 20 + (9.5 / 4) * i;
+    const yt = -3.7 + (i * 1.3 / 4);
+    const yb = -2.2 + (i * 1 / 4);
+    ctx.beginPath();
+    ctx.moveTo(wx, yt);
+    ctx.lineTo(wx, yb);
+    ctx.stroke();
+  }
+  // cockpit highlight
+  ctx.fillStyle = 'rgba(127, 219, 218, 0.45)';
+  ctx.beginPath();
+  ctx.moveTo(21, -3.5);
+  ctx.lineTo(27, -2.7);
+  ctx.lineTo(27, -2.4);
+  ctx.lineTo(21, -3.2);
+  ctx.closePath();
+  ctx.fill();
+
+  // ===== CABIN WINDOWS (row of small dots along fuselage) =====
+  ctx.fillStyle = '#3a4a5c';
+  for (let i = 0; i < 13; i++) {
+    const wx = -18 + i * 2.6;
+    ctx.beginPath();
+    ctx.arc(wx, -1, 0.65, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ===== DOORS (subtle outline rectangles) =====
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+  ctx.lineWidth = 0.5;
+  // forward door
+  ctx.beginPath();
+  ctx.moveTo(13, -3.8);
+  ctx.lineTo(13, 3.4);
+  ctx.moveTo(15, -3.6);
+  ctx.lineTo(15, 3.5);
+  ctx.stroke();
+  // mid door
+  ctx.beginPath();
+  ctx.moveTo(-12, -4);
+  ctx.lineTo(-12, 4.6);
+  ctx.moveTo(-10, -4);
+  ctx.lineTo(-10, 4.7);
+  ctx.stroke();
+
+  // ===== Fuselage outline =====
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-30, 0);
+  ctx.bezierCurveTo(-26, -5, -10, -5.2, 18, -4.4);
+  ctx.lineTo(30, -2.2);
+  ctx.quadraticCurveTo(34, 0, 30, 2.2);
+  ctx.lineTo(18, 4.4);
+  ctx.bezierCurveTo(-10, 5.2, -26, 5, -30, 0);
+  ctx.closePath();
+  ctx.stroke();
+
+  // ===== "SWISS" wordmark (stylized, very small) =====
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.font = 'bold 3.5px Chakra Petch, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SWISS', -3, 1.6);
+
+  // ===== Boost — exhaust glow from engine =====
+  if (plane.boostFlash > 0.05) {
+    // hot exhaust at engine nozzle
+    const g = ctx.createRadialGradient(-3, 11.5, 0, -3, 11.5, 14);
+    g.addColorStop(0, `rgba(255, 230, 180, ${plane.boostFlash * 0.95})`);
+    g.addColorStop(0.4, `rgba(255, 150, 60, ${plane.boostFlash * 0.6})`);
+    g.addColorStop(1, 'rgba(255, 100, 40, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(-3, 11.5, 14, 0, Math.PI * 2);
+    ctx.fill();
+    // tail vapor cone
+    const g2 = ctx.createRadialGradient(-30, 0, 0, -30, 0, 18);
+    g2.addColorStop(0, `rgba(255, 255, 255, ${plane.boostFlash * 0.35})`);
+    g2.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath();
+    ctx.arc(-30, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    if (p.type === 'vapor') {
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, p.life) * 0.45})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.type === 'spark') {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color || '#fff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+// ============================================================
+// LOOP
+// ============================================================
+
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  trackPerformance(dt);
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+// Frame-time monitor: measures avg FPS over a 1-second rolling window
+// and reduces visual richness if it dips. Runs cheaply every frame.
+function trackPerformance(dt) {
+  if (dt <= 0) return;
+  frameTimes.push(dt);
+  if (frameTimes.length > 60) frameTimes.shift();
+  if (frameTimes.length < 30) return;
+
+  const avgDt = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+  avgFps = 1 / avgDt;
+
+  // Hysteresis to avoid quality flapping
+  if (avgFps < 30 && qualityLevel !== 'low') {
+    qualityLevel = 'low';
+    particleCap = 150;
+    weatherCapMul = 0.4;
+  } else if (avgFps < 48 && avgFps > 32 && qualityLevel === 'high') {
+    qualityLevel = 'medium';
+    particleCap = 350;
+    weatherCapMul = 0.7;
+  } else if (avgFps > 56 && qualityLevel !== 'high') {
+    qualityLevel = 'high';
+    particleCap = 800;
+    weatherCapMul = 1.0;
+  }
+
+  // Trim oldest particles if over cap (cheap, runs once per frame)
+  if (particles.length > particleCap) {
+    particles.splice(0, particles.length - particleCap);
+  }
+  if (weatherParticles.length > particleCap * 0.5) {
+    weatherParticles.splice(0, weatherParticles.length - Math.floor(particleCap * 0.5));
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+level = LEVELS[0];
+initAmbient();
+updateLivesUI();
+showOverlay('menuScreen');
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
